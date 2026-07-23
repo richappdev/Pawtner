@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pawtner
 
-## Getting Started
+AI-assisted pet adoption matching, private foster CRM, materials commerce, and **legal organization donation redirects** for Taiwan.
 
-First, run the development server:
+Canonical product spec: [Notion AI Implementation Plan](https://app.notion.com/p/3a6a4181b628815fa430c421d73ce655)
+
+## Hard boundaries
+
+- Materials e-commerce and SaaS only for commercial payments
+- Donation flows are **outbound redirects** to licensed partner orgs (permit metadata required)
+- **No** private foster cash fundraising, progress bars, payouts, or wallets
+
+## Stack
+
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- Supabase (Auth, Postgres RLS, Storage)
+- Zod + React Hook Form + TanStack Query
+- Vitest
+
+## Repositories
+
+- GitHub: https://github.com/richappdev/Pawtner
+- Supabase Dev: https://rlwctljjjvlxrexcgqmg.supabase.co (`rlwctljjjvlxrexcgqmg`)
+
+## Setup
 
 ```bash
+cp .env.example .env.local
+# fill NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY from Supabase dashboard
+
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Link Supabase (required once)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+supabase login
+supabase init   # already done in this repo
+supabase link --project-ref rlwctljjjvlxrexcgqmg
+supabase db push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Branch policy
 
-## Learn More
+`main` · `develop` · `feature/*` · `fix/*` · `release/*` · `hotfix/*`
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local app |
+| `npm run build` | Production build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## App surfaces
 
-## Deploy on Vercel
+| Path | Audience |
+|------|----------|
+| `/` | Marketing landing |
+| `/explore` … `/me` | Adopter |
+| `/foster/*` | Foster console |
+| `/admin/*` | Admin |
+| `/products` | Materials shop |
+| `/donate/[orgSlug]` | Legal org redirect (not private fundraising) |
+| `/legal/*` | Policy stubs (pending counsel review) |
+| `/pilot` | Pilot go-live checklist |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## North star
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Monthly successful adoptions that pass 30-day follow-up.

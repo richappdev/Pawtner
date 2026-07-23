@@ -28,7 +28,8 @@ jobs:
           test -n "$(ls -A supabase/migrations)"
       - name: Secret scan (basic)
         run: |
-          if grep -RInE 'supabase_service_role|sk_live_|BEGIN RSA PRIVATE KEY' --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next . ; then
+          if grep -RInE 'supabase_service_role|sk_live_|BEGIN RSA PRIVATE KEY' \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github . ; then
             echo "Potential secrets found"
             exit 1
           fi

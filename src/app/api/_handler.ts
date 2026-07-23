@@ -4,6 +4,7 @@ import { z } from "zod";
 import { runAiPipeline } from "@/lib/ai/pipeline";
 import { canAccessAdmin, canApproveAi, canReviewFoster } from "@/lib/auth/permissions";
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
+import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
 import { sanitizePetForPublic } from "@/lib/pets/public";
@@ -20,13 +21,6 @@ const segmentId = (request: Request, segment: string) =>
 const failed = (error: { message: string } | null) => (error ? jsonError(error.message, 500) : null);
 
 type Db = SupabaseClient;
-
-interface ProductRow {
-  id: string;
-  price_cents: number;
-  currency: string;
-  stock: number;
-}
 
 interface FavoriteRow {
   pets?: Record<string, unknown> | null;
@@ -70,14 +64,11 @@ export async function GET(request: Request) {
     return failed(error) ?? jsonOk(data ?? []);
   }
   if (path.startsWith("/api/donate/")) {
-    const { data, error } = await db
-      .from("organizations")
-      .select(
-        "id,name,slug,description,website_url,fundraising_authorizations(project_name,permit_number,valid_from,valid_to,lookup_url,donation_page_url)",
-      )
-      .eq("slug", segmentId(request, "donate"))
-      .maybeSingle();
-    return failed(error) ?? (data ? jsonOk(data) : jsonError("Organization not found.", 404));
+    const result = await getActiveDonationDestination(db, segmentId(request, "donate"));
+    if (result.error) return jsonError(result.error.message, 500);
+    return result.data
+      ? jsonOk(result.data)
+      : jsonError("No active donation authorization was found for this organization.", 404);
   }
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
@@ -349,6 +340,7 @@ export async function POST(request: Request) {
     return jsonOk(data, { status: 201 });
   }
   if (path === "/api/cart/checkout") {
+    if (!getFlag("commerce")) return jsonError("Commerce is currently disabled.", 403);
     const body = await parseJson(
       request,
       z.object({
@@ -358,51 +350,39 @@ export async function POST(request: Request) {
     if ("response" in body) return body.response;
     const service = await serviceClient();
     if ("response" in service) return service.response;
-    const ids = body.data.items.map((item) => item.productId);
-    const { data: products, error: productsError } = await service.supabase
-      .from("products")
-      .select("id,price_cents,currency,stock")
-      .in("id", ids)
-      .eq("is_active", true);
-    if (productsError) return jsonError(productsError.message, 500);
-    const productRows = (products ?? []) as ProductRow[];
-    if (productRows.length !== ids.length) return jsonError("One or more products are unavailable.", 409);
-    const productMap = new Map(productRows.map((product) => [product.id, product]));
-    const total = body.data.items.reduce(
-      (sum, item) => sum + (productMap.get(item.productId)?.price_cents ?? 0) * item.quantity,
-      0,
-    );
-    const { data: order, error } = await auth.supabase
-      .from("orders")
-      .insert({
-        buyer_user_id: auth.user.id,
-        status: "pending_payment",
-        total_cents: total,
-        currency: productRows[0]?.currency ?? "TWD",
-      })
-      .select("id,status,total_cents,currency,created_at")
-      .single();
-    if (error) return jsonError(error.message, 500);
-    await auth.supabase.from("order_items").insert(
-      body.data.items.map((item) => ({
-        order_id: order.id,
+    const { data: order, error } = await service.supabase.rpc("create_checkout_order", {
+      p_buyer_user_id: auth.user.id,
+      p_items: body.data.items.map((item) => ({
         product_id: item.productId,
         quantity: item.quantity,
-        unit_price_cents: productMap.get(item.productId)?.price_cents ?? 0,
       })),
-    );
+    });
+    if (error) return jsonError("Unable to create order. Check product availability and quantities.", 409);
     return jsonOk(order, { status: 201 });
   }
   if (path.includes("/orders/") && path.endsWith("/confirm-receipt")) {
     const id = segmentId(request, "orders");
     if (!uuid.safeParse(id).success) return jsonError("Invalid order ID.", 422);
-    const { data, error } = await auth.supabase
+    const { data: order, error: orderError } = await auth.supabase
+      .from("orders")
+      .select("id,status")
+      .eq("id", id)
+      .maybeSingle();
+    if (orderError) return jsonError(orderError.message, 500);
+    if (!order) return jsonError("Order not found.", 404);
+    if (order.status !== "shipped") return jsonError("Only shipped orders can be confirmed as received.", 409);
+
+    const service = await serviceClient();
+    if ("response" in service) return service.response;
+    const { data, error } = await service.supabase
       .from("orders")
       .update({ status: "delivered", receipt_confirmed_at: new Date().toISOString() })
       .eq("id", id)
+      .eq("status", "shipped")
       .select("id,status,receipt_confirmed_at")
-      .single();
-    return failed(error) ?? jsonOk(data);
+      .maybeSingle();
+    if (error) return jsonError(error.message, 500);
+    return data ? jsonOk(data) : jsonError("Order status changed before receipt confirmation.", 409);
   }
   if (path.startsWith("/api/ai/")) {
     if (!getFlag("ai")) return jsonError("AI features are currently disabled.", 403);
@@ -549,8 +529,15 @@ export async function PATCH(request: Request) {
     const body = await parseJson(request, applicationStatusTransitionSchema);
     if ("response" in body) return body.response;
     const id = segmentId(request, "applications");
-    const old = await actor.supabase.from("adoption_applications").select("status").eq("id", id).single();
+    const old = await actor.supabase
+      .from("adoption_applications")
+      .select("status,adopter_user_id")
+      .eq("id", id)
+      .single();
     if (old.error) return jsonError("Application not found.", 404);
+    if (old.data.adopter_user_id === actor.user.id) {
+      return jsonError("Applicants cannot review or approve their own applications.", 403);
+    }
     const { data, error } = await actor.supabase
       .from("adoption_applications")
       .update({ status: body.data.status })
@@ -558,13 +545,14 @@ export async function PATCH(request: Request) {
       .select()
       .single();
     if (error) return jsonError(error.message, 500);
-    await actor.supabase.from("application_status_history").insert({
+    const history = await actor.supabase.from("application_status_history").insert({
       application_id: id,
       from_status: old.data.status,
       to_status: body.data.status,
       changed_by: actor.user.id,
       note: body.data.note,
     });
+    if (history.error) return jsonError(history.error.message, 500);
     return jsonOk(data);
   }
   if (path.includes("/ai/") && path.endsWith("/approve")) {

@@ -28,7 +28,10 @@ function parseFlag(value: string | undefined): boolean | undefined {
 }
 
 export function getFlag(key: FeatureFlagKey): boolean {
-  const environmentValue = parseFlag(process.env[`FEATURE_${key.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`]);
+  const normalizedKey = key.toUpperCase().replace(/[^A-Z0-9]/g, "_");
+  const environmentValue =
+    parseFlag(process.env[`FEATURE_${normalizedKey}_ENABLED`]) ??
+    parseFlag(process.env[`FEATURE_${normalizedKey}`]);
 
   return environmentValue ?? DEFAULT_FLAGS[key] ?? false;
 }

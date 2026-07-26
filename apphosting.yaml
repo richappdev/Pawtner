@@ -68,23 +68,28 @@ env:
       - RUNTIME
 
   - variable: FEATURE_FIREBASE_AUTH_ENABLED
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FEATURE_FIREBASE_AUTH_ENABLED
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME
 
-  # Optional: comma-separated emails for dual-auth cohort (Firebase only for these users).
-  # - variable: NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT
-  #   value: "tester@example.com"
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+  # Dual-auth cohort: only these emails use Firebase Auth; others stay on Supabase.
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT
+    value: "smoke-test@gmail.com"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_AUTH_EMAIL_COHORT
+    value: "smoke-test@gmail.com"
+    availability:
+      - RUNTIME
 
   - variable: FEATURE_AI_ENABLED
     value: "true"

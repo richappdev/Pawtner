@@ -47,17 +47,17 @@ describe("firebase auth flags", () => {
 });
 
 describe("readFirebaseIdTokenFromRequest", () => {
-  it("reads bearer tokens", () => {
+  it("reads bearer tokens", async () => {
     const request = new Request("https://example.com/api/me", {
       headers: { Authorization: "Bearer abc.def.ghi" },
     });
-    expect(readFirebaseIdTokenFromRequest(request)).toBe("abc.def.ghi");
+    expect(await readFirebaseIdTokenFromRequest(request)).toBe("abc.def.ghi");
   });
 
-  it("reads the firebase id token cookie", () => {
+  it("reads the firebase id token cookie", async () => {
     const request = new Request("https://example.com/api/me", {
       headers: { cookie: "pawtner_firebase_id_token=token%2Bvalue; other=1" },
     });
-    expect(readFirebaseIdTokenFromRequest(request)).toBe("token+value");
+    expect(await readFirebaseIdTokenFromRequest(request)).toBe("token+value");
   });
 });

@@ -30,7 +30,7 @@ async function resolveInternalUserId(subject: string): Promise<string | null> {
  */
 export async function resolveAppUser(request?: Request): Promise<AppUser | null> {
   if (isFirebaseAuthEnabled()) {
-    const token = readFirebaseIdTokenFromRequest(request);
+    const token = await readFirebaseIdTokenFromRequest(request);
     if (token) {
       try {
         const decoded = await verifyFirebaseIdToken(token);

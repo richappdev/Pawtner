@@ -22,7 +22,7 @@ export async function requireUser(request?: Request) {
     if (isFirebaseAuthEnabled()) {
       const appUser = await resolveAppUser(request);
       if (appUser?.authProvider === "firebase") {
-        const token = readFirebaseIdTokenFromRequest(request);
+        const token = await readFirebaseIdTokenFromRequest(request);
         const supabase = token ? createUserScopedSupabase(token) : await createClient();
         return {
           supabase,

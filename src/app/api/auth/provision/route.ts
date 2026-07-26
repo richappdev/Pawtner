@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError, jsonOk } from "@/lib/api/http";
-import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
+import { getFirebaseAdminAuth, verifyFirebaseIdToken } from "@/lib/firebase/admin";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -28,7 +28,25 @@ export async function POST(request: Request) {
       return jsonError(error.message, 500);
     }
 
-    return jsonOk({ userId: data as string, firebaseUid: decoded.uid });
+    // Supabase third-party Firebase Auth requires role: authenticated on the JWT.
+    const auth = getFirebaseAdminAuth();
+    const userRecord = await auth.getUser(decoded.uid);
+    const existingClaims = userRecord.customClaims ?? {};
+    let claimsUpdated = false;
+    if (existingClaims.role !== "authenticated") {
+      await auth.setCustomUserClaims(decoded.uid, {
+        ...existingClaims,
+        role: "authenticated",
+      });
+      claimsUpdated = true;
+    }
+
+    return jsonOk({
+      userId: data as string,
+      firebaseUid: decoded.uid,
+      claimsUpdated,
+      refreshIdToken: claimsUpdated,
+    });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Missing required environment variable:")) {
       return jsonError("Service unavailable: identity provisioning is not configured.", 503);

@@ -1,10 +1,9 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { onAuthStateChanged } from "firebase/auth";
 
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
-import { getFirebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseIdToken } from "@/lib/firebase/session";
 
 function requiredPublicEnvironment(): { url: string; key: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,21 +23,6 @@ function requiredPublicEnvironment(): { url: string; key: string } {
   return { url, key };
 }
 
-async function firebaseAccessToken(): Promise<string | null> {
-  const auth = getFirebaseAuth();
-  const user = auth.currentUser;
-  if (user) {
-    return user.getIdToken();
-  }
-
-  return new Promise((resolve) => {
-    const unsub = onAuthStateChanged(auth, async (next) => {
-      unsub();
-      resolve(next ? await next.getIdToken() : null);
-    });
-  });
-}
-
 export function createClient() {
   const { url, key } = requiredPublicEnvironment();
 
@@ -47,6 +31,6 @@ export function createClient() {
   }
 
   return createBrowserClient(url, key, {
-    accessToken: async () => await firebaseAccessToken(),
+    accessToken: async () => await getFirebaseIdToken(false),
   });
 }

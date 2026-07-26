@@ -1,8 +1,9 @@
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 
+import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { readFirebaseIdTokenFromRequest } from "@/lib/auth/firebase-token";
 import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 
 export type AppUser = {
   id: string;
@@ -10,12 +11,6 @@ export type AppUser = {
   authProvider: "supabase" | "firebase";
   firebaseUid?: string;
 };
-
-function bearerToken(request?: Request): string | undefined {
-  const header = request?.headers.get("authorization");
-  if (!header?.toLowerCase().startsWith("bearer ")) return undefined;
-  return header.slice(7).trim() || undefined;
-}
 
 async function resolveInternalUserId(subject: string): Promise<string | null> {
   const service = createServiceClient();
@@ -34,7 +29,7 @@ async function resolveInternalUserId(subject: string): Promise<string | null> {
  */
 export async function resolveAppUser(request?: Request): Promise<AppUser | null> {
   if (isFirebaseAuthEnabled()) {
-    const token = bearerToken(request);
+    const token = readFirebaseIdTokenFromRequest(request);
     if (token) {
       try {
         const decoded = await verifyFirebaseIdToken(token);

@@ -39,6 +39,7 @@ jobs:
         run: |
           test -f docs/hosting-spike.md
           test -f docs/phase-1-rollback.md
+          test -f docs/phase-2-dual-auth.md
           test -f docs/firebase-project.md
           test -f apphosting.yaml
           test -f Dockerfile

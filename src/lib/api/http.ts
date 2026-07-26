@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { resolveAppUser } from "@/lib/auth/resolve-user";
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { readFirebaseIdTokenFromRequest } from "@/lib/auth/firebase-token";
+import { createUserScopedSupabase, resolveAppUser } from "@/lib/auth/resolve-user";
 import { createClient } from "@/lib/supabase/server";
-import { createUserScopedSupabase } from "@/lib/auth/resolve-user";
 
 export function jsonOk<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json({ data }, { status: 200, ...init });
@@ -16,18 +16,12 @@ export function jsonError(message: string, status = 400, details?: unknown) {
   );
 }
 
-function bearerToken(request?: Request): string | undefined {
-  const header = request?.headers.get("authorization");
-  if (!header?.toLowerCase().startsWith("bearer ")) return undefined;
-  return header.slice(7).trim() || undefined;
-}
-
 export async function requireUser(request?: Request) {
   try {
     if (isFirebaseAuthEnabled()) {
       const appUser = await resolveAppUser(request);
       if (appUser?.authProvider === "firebase") {
-        const token = bearerToken(request);
+        const token = readFirebaseIdTokenFromRequest(request);
         const supabase = token ? createUserScopedSupabase(token) : await createClient();
         return {
           supabase,

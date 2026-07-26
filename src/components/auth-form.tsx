@@ -11,16 +11,34 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { isFirebaseAuthEnabled, isFirebaseAuthForcedForEmail } from "@/lib/auth/firebase-flags";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import {
+  getFirebaseIdToken,
+  writeFirebaseIdTokenCookie,
+} from "@/lib/firebase/session";
 import { createClient } from "@/lib/supabase/client";
+
+type ProvisionResponse = {
+  data?: { refreshIdToken?: boolean };
+  error?: { message?: string };
+};
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const isSignup = mode === "signup";
   const router = useRouter();
-  const useFirebase = isFirebaseAuthEnabled();
+
+  function shouldUseFirebase(email: string) {
+    if (!isFirebaseAuthEnabled()) return false;
+    // When a cohort is configured, only those emails use Firebase; otherwise all users do.
+    const cohort = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT ?? process.env.FIREBASE_AUTH_EMAIL_COHORT;
+    if (cohort && cohort.trim()) {
+      return isFirebaseAuthForcedForEmail(email);
+    }
+    return true;
+  }
 
   async function provisionFirebaseUser(idToken: string) {
     const response = await fetch("/api/auth/provision", {
@@ -31,10 +49,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       },
       body: "{}",
     });
+    const body = (await response.json().catch(() => null)) as ProvisionResponse | null;
     if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
       throw new Error(body?.error?.message ?? "Unable to provision identity.");
     }
+    return body?.data;
   }
 
   async function submitFirebase(formData: FormData) {
@@ -50,9 +69,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       await updateProfile(credential.user, { displayName: email.split("@")[0] });
     }
 
-    const idToken = await credential.user.getIdToken();
-    await provisionFirebaseUser(idToken);
-    document.cookie = `pawtner_firebase_id_token=${encodeURIComponent(idToken)}; path=/; SameSite=Lax`;
+    let idToken = await credential.user.getIdToken();
+    const provisioned = await provisionFirebaseUser(idToken);
+    if (provisioned?.refreshIdToken) {
+      const refreshed = await getFirebaseIdToken(true);
+      if (!refreshed) {
+        throw new Error("Unable to refresh Firebase ID token after claims update.");
+      }
+      idToken = refreshed;
+    }
+    writeFirebaseIdTokenCookie(idToken);
   }
 
   async function submitSupabase(formData: FormData) {
@@ -79,7 +105,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setMessage(undefined);
 
     try {
-      if (useFirebase) {
+      const email = String(formData.get("email"));
+      if (shouldUseFirebase(email)) {
         await submitFirebase(formData);
       } else {
         const ready = await submitSupabase(formData);
@@ -122,8 +149,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {isSignup ? "登入" : "建立帳號"}
         </Link>
       </p>
-      {useFirebase && (
-        <p className="text-center text-xs text-muted">Firebase Auth bridge enabled</p>
+      {isFirebaseAuthEnabled() && (
+        <p className="text-center text-xs text-muted">Firebase Auth bridge available (dual-auth)</p>
       )}
     </form>
   );

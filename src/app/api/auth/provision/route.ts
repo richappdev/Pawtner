@@ -2,16 +2,19 @@ import { NextResponse } from "next/server";
 
 import { jsonError, jsonOk } from "@/lib/api/http";
 import { getFirebaseAdminAuth, verifyFirebaseIdToken } from "@/lib/firebase/admin";
+import { logger } from "@/lib/logging";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const header = request.headers.get("authorization");
   if (!header?.toLowerCase().startsWith("bearer ")) {
+    logger.warn("auth.provision.failure", { reason: "missing_bearer" });
     return jsonError("Bearer Firebase ID token is required.", 401);
   }
 
   const idToken = header.slice(7).trim();
   if (!idToken) {
+    logger.warn("auth.provision.failure", { reason: "empty_bearer" });
     return jsonError("Bearer Firebase ID token is required.", 401);
   }
 
@@ -25,6 +28,11 @@ export async function POST(request: Request) {
     });
 
     if (error) {
+      logger.error("auth.provision.failure", {
+        reason: "rpc_error",
+        firebaseUid: decoded.uid,
+        message: error.message,
+      });
       return jsonError(error.message, 500);
     }
 
@@ -41,6 +49,12 @@ export async function POST(request: Request) {
       claimsUpdated = true;
     }
 
+    logger.info("auth.provision.success", {
+      firebaseUid: decoded.uid,
+      userId: data,
+      claimsUpdated,
+    });
+
     return jsonOk({
       userId: data as string,
       firebaseUid: decoded.uid,
@@ -49,8 +63,13 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Missing required environment variable:")) {
+      logger.error("auth.provision.failure", { reason: "misconfigured", message: error.message });
       return jsonError("Service unavailable: identity provisioning is not configured.", 503);
     }
+    logger.warn("auth.provision.failure", {
+      reason: "token_verify",
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return jsonError(
       error instanceof Error ? error.message : "Unable to verify Firebase token.",
       401,

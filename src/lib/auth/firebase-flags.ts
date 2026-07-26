@@ -1,6 +1,6 @@
 export const FIREBASE_ID_TOKEN_COOKIE = "pawtner_firebase_id_token";
 
-function parseBool(raw: string | undefined): boolean {
+export function parseBool(raw: string | undefined): boolean {
   if (raw === undefined) return false;
   switch (raw.trim().toLowerCase()) {
     case "1":
@@ -19,20 +19,34 @@ export function isFirebaseAuthEnabled(): boolean {
   );
 }
 
-function firebaseAuthEmailCohort(): string {
+function firebaseAuthEmailCohortRaw(): string {
   return (
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT ?? process.env.FIREBASE_AUTH_EMAIL_COHORT ?? ""
   );
 }
 
-/** Gradual cutover cohort: comma-separated emails that must use Firebase Auth. */
-export function isFirebaseAuthForcedForEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const cohort = firebaseAuthEmailCohort();
-  if (!cohort.trim()) return isFirebaseAuthEnabled();
-  const allowed = cohort
+/** Parsed gradual-cutover allowlist (empty = all emails when Firebase Auth is enabled). */
+export function getFirebaseAuthCohortEmails(): string[] {
+  return firebaseAuthEmailCohortRaw()
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function isFirebaseAuthCohortConfigured(): boolean {
+  return getFirebaseAuthCohortEmails().length > 0;
+}
+
+/** Gradual cutover cohort: comma-separated emails that must use Firebase Auth. */
+export function isFirebaseAuthForcedForEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const allowed = getFirebaseAuthCohortEmails();
+  if (allowed.length === 0) return isFirebaseAuthEnabled();
   return allowed.includes(email.trim().toLowerCase());
+}
+
+/** Phase 4 rollout mode for ops snapshots. */
+export function getFirebaseAuthRolloutMode(): "off" | "cohort" | "all" {
+  if (!isFirebaseAuthEnabled()) return "off";
+  return isFirebaseAuthCohortConfigured() ? "cohort" : "all";
 }

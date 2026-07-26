@@ -17,6 +17,7 @@ import {
   getFirebaseIdToken,
   writeFirebaseIdTokenCookie,
 } from "@/lib/firebase/session";
+import { logger } from "@/lib/logging";
 import { createClient } from "@/lib/supabase/client";
 
 type ProvisionResponse = {
@@ -106,16 +107,22 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
     try {
       const email = String(formData.get("email"));
-      if (shouldUseFirebase(email)) {
+      const provider = shouldUseFirebase(email) ? "firebase" : "supabase";
+      if (provider === "firebase") {
         await submitFirebase(formData);
       } else {
         const ready = await submitSupabase(formData);
         if (!ready) return;
       }
 
+      logger.info("auth.login.success", { provider, mode });
       router.replace("/explore");
       router.refresh();
     } catch (error) {
+      logger.warn("auth.login.failure", {
+        mode,
+        message: error instanceof Error ? error.message : "unknown",
+      });
       setMessage(error instanceof Error ? error.message : "無法初始化登入服務。");
     } finally {
       setPending(false);

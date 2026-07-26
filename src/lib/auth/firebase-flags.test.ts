@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isFirebaseAuthEnabled, isFirebaseAuthForcedForEmail } from "./firebase-flags";
+import {
+  getFirebaseAuthRolloutMode,
+  isFirebaseAuthCohortConfigured,
+  isFirebaseAuthEnabled,
+  isFirebaseAuthForcedForEmail,
+} from "./firebase-flags";
 import { readFirebaseIdTokenFromRequest } from "./firebase-token";
 
 describe("firebase auth flags", () => {
@@ -10,11 +15,13 @@ describe("firebase auth flags", () => {
 
   it("defaults firebase auth to disabled", () => {
     expect(isFirebaseAuthEnabled()).toBe(false);
+    expect(getFirebaseAuthRolloutMode()).toBe("off");
   });
 
   it("reads FEATURE_FIREBASE_AUTH_ENABLED", () => {
     vi.stubEnv("FEATURE_FIREBASE_AUTH_ENABLED", "true");
     expect(isFirebaseAuthEnabled()).toBe(true);
+    expect(getFirebaseAuthRolloutMode()).toBe("all");
   });
 
   it("respects email cohort for gradual cutover", () => {
@@ -22,6 +29,8 @@ describe("firebase auth flags", () => {
     vi.stubEnv("FIREBASE_AUTH_EMAIL_COHORT", "alpha@example.com, beta@example.com");
     expect(isFirebaseAuthForcedForEmail("alpha@example.com")).toBe(true);
     expect(isFirebaseAuthForcedForEmail("other@example.com")).toBe(false);
+    expect(isFirebaseAuthCohortConfigured()).toBe(true);
+    expect(getFirebaseAuthRolloutMode()).toBe("cohort");
   });
 
   it("prefers NEXT_PUBLIC cohort for client-visible cutover", () => {
@@ -29,6 +38,11 @@ describe("firebase auth flags", () => {
     vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT", "gamma@example.com");
     expect(isFirebaseAuthForcedForEmail("gamma@example.com")).toBe(true);
     expect(isFirebaseAuthForcedForEmail("alpha@example.com")).toBe(false);
+  });
+
+  it("accepts yes/on/1 as enabled", () => {
+    vi.stubEnv("FEATURE_FIREBASE_AUTH_ENABLED", "yes");
+    expect(isFirebaseAuthEnabled()).toBe(true);
   });
 });
 

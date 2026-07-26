@@ -3,6 +3,7 @@ import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 import { readFirebaseIdTokenFromRequest } from "@/lib/auth/firebase-token";
 import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
+import { logger } from "@/lib/logging";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export type AppUser = {
@@ -34,7 +35,10 @@ export async function resolveAppUser(request?: Request): Promise<AppUser | null>
       try {
         const decoded = await verifyFirebaseIdToken(token);
         const mapped = await resolveInternalUserId(decoded.uid);
-        if (!mapped) return null;
+        if (!mapped) {
+          logger.warn("auth.resolve.unmapped", { firebaseUid: decoded.uid });
+          return null;
+        }
         return {
           id: mapped,
           email: decoded.email ?? null,

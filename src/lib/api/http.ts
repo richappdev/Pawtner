@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 import { readFirebaseIdTokenFromRequest } from "@/lib/auth/firebase-token";
 import { createUserScopedSupabase, resolveAppUser } from "@/lib/auth/resolve-user";
+import { logger } from "@/lib/logging";
 import { createClient } from "@/lib/supabase/server";
 
 export function jsonOk<T>(data: T, init: ResponseInit = {}) {
@@ -45,6 +46,9 @@ export async function requireUser(request?: Request) {
       error,
     } = await supabase.auth.getUser();
     if (error || !user) {
+      logger.warn("auth.require_user.unauthorized", {
+        firebaseEnabled: isFirebaseAuthEnabled(),
+      });
       return { response: jsonError("Authentication is required.", 401) } as const;
     }
 

@@ -5,15 +5,22 @@ export function PageShell({
   eyebrow,
   title,
   children,
+  headerAction,
 }: {
   eyebrow?: string;
   title: string;
   children?: React.ReactNode;
+  headerAction?: React.ReactNode;
 }) {
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">
-      {eyebrow && <p className="mb-2 text-sm font-semibold text-accent">{eyebrow}</p>}
-      <h1 className="display text-4xl leading-tight">{title}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          {eyebrow && <p className="mb-2 text-sm font-semibold text-accent">{eyebrow}</p>}
+          <h1 className="display text-4xl leading-tight">{title}</h1>
+        </div>
+        {headerAction}
+      </div>
       {children}
     </main>
   );

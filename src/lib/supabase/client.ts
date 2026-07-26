@@ -2,7 +2,8 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 
-import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { FIREBASE_ID_TOKEN_COOKIE, isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { getFirebaseIdToken } from "@/lib/firebase/session";
 
 function requiredPublicEnvironment(): { url: string; key: string } {
@@ -23,14 +24,26 @@ function requiredPublicEnvironment(): { url: string; key: string } {
   return { url, key };
 }
 
+function hasFirebaseSessionHint(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (getFirebaseAuth().currentUser) return true;
+  } catch {
+    // Firebase web config may be missing in some local setups.
+  }
+  return document.cookie.split(";").some((part) => part.trim().startsWith(`${FIREBASE_ID_TOKEN_COOKIE}=`));
+}
+
 export function createClient() {
   const { url, key } = requiredPublicEnvironment();
 
-  if (!isFirebaseAuthEnabled()) {
-    return createBrowserClient(url, key);
+  // Dual-auth: only attach Firebase JWT when a Firebase session exists.
+  // Non-cohort users keep Supabase Auth cookie sessions (do not pass accessToken).
+  if (isFirebaseAuthEnabled() && hasFirebaseSessionHint()) {
+    return createBrowserClient(url, key, {
+      accessToken: async () => (await getFirebaseIdToken(false)) ?? null,
+    });
   }
 
-  return createBrowserClient(url, key, {
-    accessToken: async () => await getFirebaseIdToken(false),
-  });
+  return createBrowserClient(url, key);
 }

@@ -14,11 +14,13 @@ import { Input } from "@/components/ui/input";
 import { isFirebaseAuthEnabled, isFirebaseAuthForcedForEmail } from "@/lib/auth/firebase-flags";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import {
+  clearFirebaseIdTokenCookieClient,
   getFirebaseIdToken,
+  signOutFirebase,
   writeFirebaseIdTokenCookie,
 } from "@/lib/firebase/session";
 import { logger } from "@/lib/logging";
-import { createClient } from "@/lib/supabase/client";
+import { createPasswordAuthClient } from "@/lib/supabase/client";
 
 type ProvisionResponse = {
   data?: { refreshIdToken?: boolean };
@@ -83,7 +85,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function submitSupabase(formData: FormData) {
-    const supabase = createClient();
+    // Clear any leftover Firebase session so we never call signInWithPassword
+    // on an accessToken-bound Supabase client.
+    clearFirebaseIdTokenCookieClient();
+    try {
+      await signOutFirebase();
+    } catch {
+      // Firebase may be unconfigured locally; password auth can still proceed.
+    }
+
+    const supabase = createPasswordAuthClient();
     const email = String(formData.get("email"));
     const password = String(formData.get("password"));
     const { data, error } = isSignup

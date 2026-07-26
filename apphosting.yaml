@@ -79,17 +79,8 @@ env:
       - BUILD
       - RUNTIME
 
-  # Dual-auth cohort: only these emails use Firebase Auth; others stay on Supabase.
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT
-    value: "smoke-test@gmail.com"
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: FIREBASE_AUTH_EMAIL_COHORT
-    value: "smoke-test@gmail.com"
-    availability:
-      - RUNTIME
+  # Phase 4: omit cohort vars = 100% Firebase Auth while flags are true.
+  # To roll back gradually, re-add NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT / FIREBASE_AUTH_EMAIL_COHORT.
 
   - variable: FEATURE_AI_ENABLED
     value: "true"

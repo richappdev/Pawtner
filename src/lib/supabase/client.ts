@@ -34,6 +34,7 @@ function hasFirebaseSessionHint(): boolean {
   return document.cookie.split(";").some((part) => part.trim().startsWith(`${FIREBASE_ID_TOKEN_COOKIE}=`));
 }
 
+/** Browser client for app data. May bind Firebase JWT via accessToken. */
 export function createClient() {
   const { url, key } = requiredPublicEnvironment();
 
@@ -45,5 +46,14 @@ export function createClient() {
     });
   }
 
+  return createBrowserClient(url, key);
+}
+
+/**
+ * Plain cookie-session client for email/password Auth only.
+ * Never pass accessToken — supabase-js rejects signInWithPassword when it is set.
+ */
+export function createPasswordAuthClient() {
+  const { url, key } = requiredPublicEnvironment();
   return createBrowserClient(url, key);
 }

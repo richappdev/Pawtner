@@ -5,9 +5,10 @@
 - [x] Phase 1 hosting exit criteria met
 - [x] Phase 3 migrations applied (`firebase_identity_bridge`, `firebase_rls_internal_user`)
 - [x] Dual-auth cutover scaffolding (cohort flags, ops snapshot, auth logging, dual logout)
-- [ ] Phase 2/3 cohort smoke completed on staging
+- [x] Staging deploy live with Phase 4 ops endpoints
+- [x] Expanded to 100% Firebase Auth on staging (`firebaseAuthRollout: all`)
+- [ ] Manual cohort/login smoke confirmed by operator
 - [ ] 24–72h monitoring window with stable metrics
-- [ ] Expand cohort → 100% Firebase Auth
 - [ ] After rollback window: retire Supabase Auth client paths
 
 ## Preconditions

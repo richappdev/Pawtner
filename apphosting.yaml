@@ -1,0 +1,88 @@
+# Firebase App Hosting — Pawtner staging/prod backend (pawtner-web)
+# Secrets are stored in Google Cloud Secret Manager and referenced by name.
+# Set secrets with:
+#   npx -y firebase-tools@latest apphosting:secrets:set SUPABASE_SERVICE_ROLE_KEY --project pawtner-app-2026
+#   npx -y firebase-tools@latest apphosting:secrets:set NEXT_PUBLIC_SUPABASE_ANON_KEY --project pawtner-app-2026
+#   (repeat for each secret below)
+
+runConfig:
+  cpu: 1
+  memoryMiB: 1024
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+env:
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: https://rlwctljjjvlxrexcgqmg.supabase.co
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    secret: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+    availability:
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: pawtner-app-2026.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: pawtner-app-2026
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:611592714843:web:b10424774e91a6ff9add7e
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "611592714843"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Optional: path to service account JSON for Admin SDK on App Hosting
+  # Prefer Application Default Credentials on GCP; use this only when needed.
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: pawtner-app-2026
+    availability:
+      - RUNTIME
+
+  - variable: FEATURE_FIREBASE_AUTH_ENABLED
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FEATURE_AI_ENABLED
+    value: "true"
+    availability:
+      - RUNTIME
+
+  - variable: FEATURE_COMMERCE_ENABLED
+    value: "true"
+    availability:
+      - RUNTIME
+
+  # Optional secrets — set later when needed:
+  # npx -y firebase-tools@latest apphosting:secrets:set PAYMENT_WEBHOOK_SECRET --project pawtner-app-2026
+  # npx -y firebase-tools@latest apphosting:secrets:set SENTRY_DSN --project pawtner-app-2026

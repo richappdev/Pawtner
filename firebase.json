@@ -1,0 +1,41 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true
+    }
+  },
+  "apphosting": {
+    "backendId": "pawtner-web",
+    "rootDir": "/",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "**/.*",
+      ".next",
+      "docs",
+      "scripts",
+      "supabase/tests",
+      "supabase/migrations",
+      "Dockerfile"
+    ]
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "pawtner-web",
+          "region": "asia-east1"
+        }
+      }
+    ]
+  }
+}

@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { createClient } from "@/lib/supabase/client";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
@@ -13,31 +20,74 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [pending, setPending] = useState(false);
   const isSignup = mode === "signup";
   const router = useRouter();
+  const useFirebase = isFirebaseAuthEnabled();
+
+  async function provisionFirebaseUser(idToken: string) {
+    const response = await fetch("/api/auth/provision", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+      throw new Error(body?.error?.message ?? "Unable to provision identity.");
+    }
+  }
+
+  async function submitFirebase(formData: FormData) {
+    const auth = getFirebaseAuth();
+    const email = String(formData.get("email"));
+    const password = String(formData.get("password"));
+
+    const credential = isSignup
+      ? await createUserWithEmailAndPassword(auth, email, password)
+      : await signInWithEmailAndPassword(auth, email, password);
+
+    if (isSignup && credential.user.displayName == null) {
+      await updateProfile(credential.user, { displayName: email.split("@")[0] });
+    }
+
+    const idToken = await credential.user.getIdToken();
+    await provisionFirebaseUser(idToken);
+    document.cookie = `pawtner_firebase_id_token=${encodeURIComponent(idToken)}; path=/; SameSite=Lax`;
+  }
+
+  async function submitSupabase(formData: FormData) {
+    const supabase = createClient();
+    const email = String(formData.get("email"));
+    const password = String(formData.get("password"));
+    const { data, error } = isSignup
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data.session) {
+      setMessage("請前往信箱完成驗證。");
+      return false;
+    }
+    return true;
+  }
 
   async function submit(formData: FormData) {
     setPending(true);
     setMessage(undefined);
 
     try {
-      const supabase = createClient();
-      const email = String(formData.get("email"));
-      const password = String(formData.get("password"));
-      const { data, error } = isSignup
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        setMessage(error.message);
-        return;
+      if (useFirebase) {
+        await submitFirebase(formData);
+      } else {
+        const ready = await submitSupabase(formData);
+        if (!ready) return;
       }
 
-      if (data.session) {
-        router.replace("/explore");
-        router.refresh();
-        return;
-      }
-
-      setMessage("請前往信箱完成驗證。");
+      router.replace("/explore");
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "無法初始化登入服務。");
     } finally {
@@ -72,6 +122,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {isSignup ? "登入" : "建立帳號"}
         </Link>
       </p>
+      {useFirebase && (
+        <p className="text-center text-xs text-muted">Firebase Auth bridge enabled</p>
+      )}
     </form>
   );
 }

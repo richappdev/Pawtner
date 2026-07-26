@@ -22,10 +22,26 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://rlwctljjjvlxrexcgqmg.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key-for-ci
+          NEXT_PUBLIC_FIREBASE_API_KEY: public-firebase-api-key-for-ci
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:611592714843:web:b10424774e91a6ff9add7e
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: pawtner-app-2026
+          FEATURE_FIREBASE_AUTH_ENABLED: "false"
+          NEXT_PUBLIC_FEATURE_FIREBASE_AUTH_ENABLED: "false"
       - name: Validate SQL migrations exist
         run: |
           test -d supabase/migrations
           test -n "$(ls -A supabase/migrations)"
+          test -f supabase/migrations/20260723091017_firebase_identity_bridge.sql
+          test -f supabase/migrations/20260723091018_firebase_rls_internal_user.sql
+      - name: Auth inventory script
+        run: node scripts/inventory-auth-uid.mjs
+      - name: Hosting smoke checklist present
+        run: |
+          test -f docs/hosting-spike.md
+          test -f docs/phase-1-rollback.md
+          test -f docs/firebase-project.md
+          test -f apphosting.yaml
+          test -f Dockerfile
       - name: Secret scan (basic)
         run: |
           if grep -RInE 'supabase_service_role|sk_live_|BEGIN RSA PRIVATE KEY' \

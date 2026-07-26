@@ -17,13 +17,15 @@ export async function serviceClient() {
   }
 }
 
-export async function requireActor() {
-  const auth = await requireUser();
+export async function requireActor(request?: Request) {
+  const auth = await requireUser(request);
   if ("response" in auth) return auth;
-  const { data } = await auth.supabase.from("user_roles").select("role").eq("user_id", auth.user.id);
+  const userId = auth.appUser?.id ?? auth.user.id;
+  const { data } = await auth.supabase.from("user_roles").select("role").eq("user_id", userId);
   return {
     ...auth,
-    actor: { id: auth.user.id, roles: (data ?? []).map((row) => row.role) as AppRole[] },
+    user: { ...auth.user, id: userId },
+    actor: { id: userId, roles: (data ?? []).map((row) => row.role) as AppRole[] },
   } as const;
 }
 

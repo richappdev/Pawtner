@@ -70,7 +70,7 @@ export async function GET(request: Request) {
       ? jsonOk(result.data)
       : jsonError("No active donation authorization was found for this organization.", 404);
   }
-  const auth = await requireUser();
+  const auth = await requireUser(request);
   if ("response" in auth) return auth.response;
   if (path === "/api/me") {
     const { data, error } = await auth.supabase.from("user_profiles").select("*").eq("id", auth.user.id).single();
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
     const { data, error } = await auth.supabase.from("wishlists").select("*, wishlist_items(*)");
     return failed(error) ?? jsonOk(data ?? []);
   }
-  const actor = await requireActor();
+  const actor = await requireActor(request);
   if (!("actor" in actor)) return actor.response;
   if (path === "/api/admin/audit" && canAccessAdmin(actor.actor)) {
     const { data, error } = await actor.supabase
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
     if (error?.code === "23505") return jsonOk({ received: true, duplicate: true });
     return failed(error) ?? jsonOk({ received: true });
   }
-  const auth = await requireUser();
+  const auth = await requireUser(request);
   if ("response" in auth) return auth.response;
   if (path === "/api/favorites") {
     const body = await parseJson(request, z.object({ petId: uuid }));
@@ -431,7 +431,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const path = pathname(request);
-  const actor = await requireActor();
+  const actor = await requireActor(request);
   if (!("actor" in actor)) return actor.response;
   if (path === "/api/me") {
     const body = await parseJson(
@@ -575,7 +575,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireUser(request);
   if ("response" in auth) return auth.response;
   const petId = new URL(request.url).searchParams.get("petId");
   if (!petId || !uuid.safeParse(petId).success) {

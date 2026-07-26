@@ -2,10 +2,10 @@
 
 ## Preconditions
 
-- [ ] Phase 1 hosting exit criteria met
+- [x] Phase 1 hosting exit criteria met
 - [ ] Phase 2 dual-auth verified for test cohort
-- [ ] Phase 3 migrations applied (`firebase_identity_bridge`, `firebase_rls_internal_user`)
-- [ ] SQL tests in `supabase/tests/firebase_identity.sql` pass on staging
+- [x] Phase 3 migrations applied (`firebase_identity_bridge`, `firebase_rls_internal_user`)
+- [ ] SQL tests in `supabase/tests/firebase_identity.sql` / `firebase_rls.sql` pass on staging
 - [ ] Secret Manager populated; Admin SDK ADC or service account configured
 
 ## Cutover steps

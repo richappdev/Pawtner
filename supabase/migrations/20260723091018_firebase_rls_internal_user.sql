@@ -192,6 +192,29 @@ create policy "applications_adopter_insert"
     and internal_notes is null
   );
 
+-- Prefer reviewer-only updates (foster/staff). Fall back rewrite if harden not applied yet.
+drop policy if exists "applications_update_participants" on public.adoption_applications;
+drop policy if exists "applications_update_reviewers" on public.adoption_applications;
+create policy "applications_update_reviewers"
+  on public.adoption_applications for update
+  to authenticated
+  using (public.owns_pet(pet_id) or public.is_staff())
+  with check (public.owns_pet(pet_id) or public.is_staff());
+
+drop policy if exists "history_insert_participants" on public.application_status_history;
+drop policy if exists "history_insert_reviewers" on public.application_status_history;
+create policy "history_insert_reviewers"
+  on public.application_status_history for insert
+  to authenticated
+  with check (
+    exists (
+      select 1
+      from public.adoption_applications application
+      where application.id = application_id
+        and (public.owns_pet(application.pet_id) or public.is_staff())
+    )
+  );
+
 -- Messaging
 drop policy if exists "conversations_insert_auth" on public.conversations;
 create policy "conversations_insert_auth"
@@ -271,6 +294,16 @@ drop policy if exists "orders_buyer_or_staff" on public.orders;
 create policy "orders_buyer_or_staff"
   on public.orders for select
   using (buyer_user_id = public.current_app_user_id() or public.is_staff());
+
+-- Client inserts/updates are not allowed; checkout runs via service-role RPC.
+drop policy if exists "orders_buyer_insert" on public.orders;
+drop policy if exists "orders_update_buyer_or_staff" on public.orders;
+drop policy if exists "orders_update_staff" on public.orders;
+create policy "orders_update_staff"
+  on public.orders for update
+  to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
 
 drop policy if exists "order_items_via_order" on public.order_items;
 create policy "order_items_via_order"
@@ -368,3 +401,142 @@ begin
   return new;
 end;
 $$;
+
+-- 4) Ensure checkout RPC exists (was missing on remote if harden migration never applied).
+create or replace function public.create_checkout_order(
+  p_buyer_user_id uuid,
+  p_items jsonb
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_currency text;
+  v_currency_count integer;
+  v_product_count integer;
+  v_requested_count integer;
+  v_total integer;
+  v_order public.orders;
+begin
+  if p_buyer_user_id is null then
+    raise exception 'A buyer is required.';
+  end if;
+
+  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'At least one checkout item is required.';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_items) as item(product_id uuid, quantity integer)
+    where item.product_id is null or item.quantity is null or item.quantity < 1 or item.quantity > 100
+  ) then
+    raise exception 'Checkout items are invalid.';
+  end if;
+
+  with requested as (
+    select item.product_id, sum(item.quantity)::integer as quantity
+    from jsonb_to_recordset(p_items) as item(product_id uuid, quantity integer)
+    group by item.product_id
+  ),
+  priced as (
+    select p.id, p.price_cents, p.currency, r.quantity
+    from requested r
+    join public.products p on p.id = r.product_id
+    where p.is_active = true and p.stock >= r.quantity
+    for update of p
+  )
+  select
+    (select count(*) from requested),
+    count(*),
+    count(distinct priced.currency),
+    min(priced.currency),
+    coalesce(sum(priced.price_cents * priced.quantity), 0)::integer
+  into v_requested_count, v_product_count, v_currency_count, v_currency, v_total
+  from priced;
+
+  if v_product_count <> v_requested_count then
+    raise exception 'One or more products are unavailable or lack sufficient stock.';
+  end if;
+
+  if v_currency_count <> 1 then
+    raise exception 'All checkout products must use the same currency.';
+  end if;
+
+  insert into public.orders (
+    buyer_user_id,
+    status,
+    total_cents,
+    currency
+  )
+  values (
+    p_buyer_user_id,
+    'pending_payment',
+    v_total,
+    v_currency
+  )
+  returning * into v_order;
+
+  insert into public.order_items (
+    order_id,
+    product_id,
+    quantity,
+    unit_price_cents
+  )
+  select
+    v_order.id,
+    p.id,
+    r.quantity,
+    p.price_cents
+  from (
+    select item.product_id, sum(item.quantity)::integer as quantity
+    from jsonb_to_recordset(p_items) as item(product_id uuid, quantity integer)
+    group by item.product_id
+  ) r
+  join public.products p on p.id = r.product_id;
+
+  return jsonb_build_object(
+    'id', v_order.id,
+    'status', v_order.status,
+    'total_cents', v_order.total_cents,
+    'currency', v_order.currency,
+    'created_at', v_order.created_at
+  );
+end;
+$$;
+
+revoke all on function public.create_checkout_order(uuid, jsonb) from public;
+revoke all on function public.create_checkout_order(uuid, jsonb) from anon;
+revoke all on function public.create_checkout_order(uuid, jsonb) from authenticated;
+grant select on table public.products, public.orders to service_role;
+grant update on table public.products to service_role;
+grant insert on table public.orders, public.order_items to service_role;
+grant update on table public.orders to service_role;
+grant execute on function public.create_checkout_order(uuid, jsonb) to service_role;
+
+-- 5) Tighten SECURITY DEFINER execute grants (helpers are for RLS, not public RPC).
+revoke all on function public.handle_new_user() from public;
+revoke all on function public.handle_new_user() from anon, authenticated;
+revoke all on function public.provision_firebase_identity(text, text, text) from public;
+revoke all on function public.provision_firebase_identity(text, text, text) from anon, authenticated;
+grant execute on function public.provision_firebase_identity(text, text, text) to service_role;
+
+revoke all on function public.has_role(public.app_role) from public;
+revoke all on function public.is_staff() from public;
+revoke all on function public.owns_pet(uuid) from public;
+revoke all on function public.can_manage_application(uuid) from public;
+revoke all on function public.is_conversation_participant(uuid) from public;
+revoke all on function public.current_app_user_id() from public;
+
+-- RLS policies evaluate these as the table owner / definer path; authenticated still needs execute.
+grant execute on function public.has_role(public.app_role) to authenticated, service_role;
+grant execute on function public.is_staff() to authenticated, service_role;
+grant execute on function public.owns_pet(uuid) to authenticated, service_role;
+grant execute on function public.can_manage_application(uuid) to authenticated, service_role;
+grant execute on function public.is_conversation_participant(uuid) to authenticated, service_role;
+grant execute on function public.current_app_user_id() to authenticated, service_role;
+-- anon may hit public-read policies that call is_staff()/current_app_user_id(); keep read-safe helpers.
+grant execute on function public.is_staff() to anon;
+grant execute on function public.current_app_user_id() to anon;

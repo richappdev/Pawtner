@@ -59,4 +59,4 @@ npx -y firebase-tools@latest deploy --only apphosting --project pawtner-app-2026
 
 ## Notes
 
-Phase 3 (RLS rewrite to `current_app_user_id()` everywhere) is **not** required for dual-auth BFF paths that use service-role provisioning + Admin verification. Apply Phase 3 before relying on browser→Supabase RLS with Firebase JWTs for all tables.
+Phase 3 (RLS rewrite to `current_app_user_id()` everywhere) is applied — see `docs/phase-3-rls.md`. Complete the Phase 3 exit smoke checks before expanding the cohort in Phase 4.

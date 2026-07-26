@@ -54,6 +54,7 @@ node scripts/inventory-auth-uid.mjs
 - Do **not** rewrite business FKs to Firebase UIDs.
 - Dual-auth window must keep Supabase Auth working until Phase 4.
 - Replace direct `auth.uid()` with `public.current_app_user_id()` after `external_identities` exists.
+- Phase 3 status: applied (`20260723091018_firebase_rls_internal_user.sql`). See `docs/phase-3-rls.md`.
 - Keep roles in `user_roles` (never Firebase custom claims for business roles).
 
 ## Auth providers / user counts

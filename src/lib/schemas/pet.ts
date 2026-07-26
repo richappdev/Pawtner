@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ADMIN_PET_REVIEW_ACTIONS } from "@/lib/pets/admin-review";
+
 export const petStatusSchema = z.enum([
   "intake",
   "medical_hold",
@@ -40,6 +42,33 @@ export const petUpdateSchema = petCreateSchema
   })
   .refine((data) => Object.keys(data).length > 0, "At least one field must be provided.");
 
+export const adminPetListQuerySchema = z.object({
+  status: petStatusSchema.optional(),
+  species: petSpeciesSchema.optional(),
+  isPublished: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === "true")),
+  q: z.string().trim().max(100).optional(),
+});
+
+export const adminPetReviewSchema = z.object({
+  action: z.enum(ADMIN_PET_REVIEW_ACTIONS),
+  note: z.string().trim().max(2_000).optional(),
+});
+
+export const adminPetPatchSchema = z
+  .object({
+    status: petStatusSchema.optional(),
+    isPublished: z.boolean().optional(),
+  })
+  .refine((data) => data.status !== undefined || data.isPublished !== undefined, {
+    message: "At least one of status or isPublished is required.",
+  });
+
 export type PetStatus = z.infer<typeof petStatusSchema>;
+export type PetSpecies = z.infer<typeof petSpeciesSchema>;
 export type PetCreateInput = z.infer<typeof petCreateSchema>;
 export type PetUpdateInput = z.infer<typeof petUpdateSchema>;
+export type AdminPetReviewInput = z.infer<typeof adminPetReviewSchema>;
+export type AdminPetPatchInput = z.infer<typeof adminPetPatchSchema>;

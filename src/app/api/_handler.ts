@@ -2,15 +2,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { runAiPipeline } from "@/lib/ai/pipeline";
-import { canAccessAdmin, canApproveAi, canReviewFoster } from "@/lib/auth/permissions";
+import { writeAuditLog } from "@/lib/audit";
+import { canAccessAdmin, canApproveAi, canManagePet, canReviewFoster } from "@/lib/auth/permissions";
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
 import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
+import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
+import { reviewActionToPatch } from "@/lib/pets/admin-review";
 import { sanitizePetForPublic } from "@/lib/pets/public";
 import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
-import { petCreateSchema, petUpdateSchema } from "@/lib/schemas/pet";
+import {
+  adminPetListQuerySchema,
+  adminPetPatchSchema,
+  adminPetReviewSchema,
+  petCreateSchema,
+  petStatusSchema,
+  petUpdateSchema,
+} from "@/lib/schemas/pet";
 import { jsonError, jsonOk, parseJson, requireActor, requireUser, serviceClient } from "@/app/api/_shared";
 
 const uuid = z.string().uuid();
@@ -150,6 +160,26 @@ export async function GET(request: Request) {
   if (path === "/api/admin/flags" && canAccessAdmin(actor.actor)) {
     const { data, error } = await actor.supabase.from("feature_flags").select("*");
     return failed(error) ?? jsonOk(data ?? []);
+  }
+  if (path === "/api/admin/pets" || path.startsWith("/api/admin/pets/")) {
+    if (!canAccessAdmin(actor.actor)) return jsonError("Administrator access is required.", 403);
+    if (path === "/api/admin/pets") {
+      const parsed = adminPetListQuerySchema.safeParse(
+        Object.fromEntries(new URL(request.url).searchParams.entries()),
+      );
+      if (!parsed.success) return jsonError("Invalid query parameters.", 422, parsed.error.flatten());
+      const { data, error } = await listAdminPets(actor.supabase, {
+        status: parsed.data.status,
+        species: parsed.data.species,
+        isPublished: parsed.data.isPublished,
+        q: parsed.data.q,
+      });
+      return failed(error) ?? jsonOk(data ?? []);
+    }
+    const id = segmentId(request, "pets");
+    if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const { data, error } = await getAdminPet(actor.supabase, id);
+    return failed(error) ?? (data ? jsonOk(data) : jsonError("Pet not found.", 404));
   }
   return jsonError(
     path.startsWith("/api/admin") ? "Administrator access is required." : "Not found.",
@@ -426,6 +456,45 @@ export async function POST(request: Request) {
       .single();
     return failed(error) ?? jsonOk(data, { status: 201 });
   }
+  if (path.startsWith("/api/admin/pets/") && path.endsWith("/review")) {
+    const actor = await requireActor(request);
+    if (!("actor" in actor)) return actor.response;
+    if (!canManagePet(actor.actor, {})) return jsonError("Pet management permission is required.", 403);
+    const id = segmentId(request, "pets");
+    if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const body = await parseJson(request, adminPetReviewSchema);
+    if ("response" in body) return body.response;
+    const existing = await actor.supabase
+      .from("pets")
+      .select("id,status,is_published,published_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing.error) return jsonError(existing.error.message, 500);
+    if (!existing.data) return jsonError("Pet not found.", 404);
+    const currentStatus = petStatusSchema.parse(existing.data.status);
+    const patch = reviewActionToPatch(body.data.action, currentStatus);
+    const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
+    if (error) return jsonError(error.message, 500);
+    try {
+      await writeAuditLog(actor.supabase, {
+        actorId: actor.actor.id,
+        action: `pet.${body.data.action}`,
+        resourceType: "pet",
+        resourceId: id,
+        metadata: {
+          before: existing.data,
+          after: data,
+          note: body.data.note,
+        },
+      });
+    } catch (auditError) {
+      return jsonError(
+        auditError instanceof Error ? auditError.message : "Unable to write audit log.",
+        500,
+      );
+    }
+    return jsonOk(data);
+  }
   return jsonError("Not found.", 404);
 }
 
@@ -479,6 +548,43 @@ export async function PATCH(request: Request) {
     }
     const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
     return failed(error) ?? jsonOk(data);
+  }
+  if (path.startsWith("/api/admin/pets/")) {
+    if (!canManagePet(actor.actor, {})) return jsonError("Pet management permission is required.", 403);
+    const id = segmentId(request, "pets");
+    if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const body = await parseJson(request, adminPetPatchSchema);
+    if ("response" in body) return body.response;
+    const existing = await actor.supabase
+      .from("pets")
+      .select("id,status,is_published,published_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing.error) return jsonError(existing.error.message, 500);
+    if (!existing.data) return jsonError("Pet not found.", 404);
+    const patch: Record<string, unknown> = {};
+    if (body.data.status !== undefined) patch.status = body.data.status;
+    if (body.data.isPublished !== undefined) {
+      patch.is_published = body.data.isPublished;
+      patch.published_at = body.data.isPublished ? new Date().toISOString() : null;
+    }
+    const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
+    if (error) return jsonError(error.message, 500);
+    try {
+      await writeAuditLog(actor.supabase, {
+        actorId: actor.actor.id,
+        action: "pet.patch",
+        resourceType: "pet",
+        resourceId: id,
+        metadata: { before: existing.data, after: data },
+      });
+    } catch (auditError) {
+      return jsonError(
+        auditError instanceof Error ? auditError.message : "Unable to write audit log.",
+        500,
+      );
+    }
+    return jsonOk(data);
   }
   if (path.startsWith("/api/admin/fosters/")) {
     const body = await parseJson(

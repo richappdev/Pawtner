@@ -1,4 +1,5 @@
 begin;
+select plan(1);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -186,4 +187,6 @@ end;
 $$;
 
 reset role;
+select pass('Commerce and adoption hardening policies reject unauthorized mutations');
+select * from finish();
 rollback;

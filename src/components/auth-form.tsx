@@ -27,7 +27,13 @@ type ProvisionResponse = {
   error?: { message?: string };
 };
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  inviteToken,
+}: {
+  mode: "login" | "signup";
+  inviteToken?: string;
+}) {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const isSignup = mode === "signup";
@@ -50,7 +56,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         Authorization: `Bearer ${idToken}`,
         "Content-Type": "application/json",
       },
-      body: "{}",
+      body: JSON.stringify(inviteToken ? { inviteToken } : {}),
     });
     const body = (await response.json().catch(() => null)) as ProvisionResponse | null;
     if (!response.ok) {

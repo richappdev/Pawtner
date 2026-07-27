@@ -130,7 +130,10 @@ export default async function AdminPetDetailPage({
       <Card className="max-w-3xl">
         <p className="font-semibold">審核操作</p>
         <div className="mt-4">
-          <AdminPetActions petId={pet.id} actions={["approve", "hide", "unpublish", "archive"]} />
+          <AdminPetActions
+            petId={pet.id}
+            actions={["approve", "request_changes", "hide", "unpublish", "archive"]}
+          />
         </div>
       </Card>
 

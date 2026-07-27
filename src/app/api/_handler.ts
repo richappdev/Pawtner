@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { runAiPipeline } from "@/lib/ai/pipeline";
+import { renderDeterministicDraft } from "@/lib/ai/templates";
 import { writeAuditLog } from "@/lib/audit";
 import { canAccessAdmin, canApproveAi, canManagePet, canReviewFoster } from "@/lib/auth/permissions";
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
@@ -9,7 +10,6 @@ import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
-import { reviewActionToPatch } from "@/lib/pets/admin-review";
 import { sanitizePetForPublic } from "@/lib/pets/public";
 import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
@@ -18,7 +18,6 @@ import {
   adminPetPatchSchema,
   adminPetReviewSchema,
   petCreateSchema,
-  petStatusSchema,
   petUpdateSchema,
 } from "@/lib/schemas/pet";
 import { jsonError, jsonOk, parseJson, requireActor, requireUser, serviceClient } from "@/app/api/_shared";
@@ -369,6 +368,22 @@ export async function POST(request: Request) {
     }
     return jsonOk(data, { status: 201 });
   }
+  if (path.startsWith("/api/foster/pets/") && path.endsWith("/submit")) {
+    const id = segmentId(request, "pets");
+    if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const body = await parseJson(
+      request,
+      z.object({ note: z.string().trim().max(2_000).optional() }),
+    );
+    if ("response" in body) return body.response;
+    const { data, error } = await auth.supabase.rpc("submit_pet_for_review", {
+      p_pet_id: id,
+      p_note: body.data.note ?? null,
+    });
+    return error
+      ? jsonError("Pet is incomplete or cannot be submitted.", 409)
+      : jsonOk(data);
+  }
   if (path === "/api/cart/checkout") {
     if (!getFlag("commerce")) return jsonError("Commerce is currently disabled.", 403);
     const body = await parseJson(
@@ -434,11 +449,7 @@ export async function POST(request: Request) {
     const result = await runAiPipeline({
       kind,
       input: body.data.input,
-      generate: async () => ({
-        content: `${kind}: ${JSON.stringify(body.data.input)}`,
-        structuredFacts: body.data.input,
-        model: process.env.AI_API_KEY ? "configured" : "template",
-      }),
+      generate: async () => renderDeterministicDraft(kind, body.data.input),
     });
     const { data, error } = await auth.supabase
       .from("ai_generations")
@@ -464,35 +475,12 @@ export async function POST(request: Request) {
     if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
     const body = await parseJson(request, adminPetReviewSchema);
     if ("response" in body) return body.response;
-    const existing = await actor.supabase
-      .from("pets")
-      .select("id,status,is_published,published_at")
-      .eq("id", id)
-      .maybeSingle();
-    if (existing.error) return jsonError(existing.error.message, 500);
-    if (!existing.data) return jsonError("Pet not found.", 404);
-    const currentStatus = petStatusSchema.parse(existing.data.status);
-    const patch = reviewActionToPatch(body.data.action, currentStatus);
-    const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
-    if (error) return jsonError(error.message, 500);
-    try {
-      await writeAuditLog(actor.supabase, {
-        actorId: actor.actor.id,
-        action: `pet.${body.data.action}`,
-        resourceType: "pet",
-        resourceId: id,
-        metadata: {
-          before: existing.data,
-          after: data,
-          note: body.data.note,
-        },
-      });
-    } catch (auditError) {
-      return jsonError(
-        auditError instanceof Error ? auditError.message : "Unable to write audit log.",
-        500,
-      );
-    }
+    const { data, error } = await actor.supabase.rpc("review_pet", {
+      p_pet_id: id,
+      p_action: body.data.action,
+      p_note: body.data.note ?? null,
+    });
+    if (error) return jsonError("Unable to complete pet review.", 409);
     return jsonOk(data);
   }
   return jsonError("Not found.", 404);
@@ -542,10 +530,6 @@ export async function PATCH(request: Request) {
     if (body.data.personalitySummary !== undefined) patch.personality_summary = body.data.personalitySummary;
     if (body.data.specialCare !== undefined) patch.special_care = body.data.specialCare;
     if (body.data.adoptionConditions !== undefined) patch.adoption_conditions = body.data.adoptionConditions;
-    if (body.data.isPublished !== undefined) {
-      patch.is_published = body.data.isPublished;
-      patch.published_at = body.data.isPublished ? new Date().toISOString() : null;
-    }
     const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
     return failed(error) ?? jsonOk(data);
   }
@@ -635,31 +619,12 @@ export async function PATCH(request: Request) {
     const body = await parseJson(request, applicationStatusTransitionSchema);
     if ("response" in body) return body.response;
     const id = segmentId(request, "applications");
-    const old = await actor.supabase
-      .from("adoption_applications")
-      .select("status,adopter_user_id")
-      .eq("id", id)
-      .single();
-    if (old.error) return jsonError("Application not found.", 404);
-    if (old.data.adopter_user_id === actor.user.id) {
-      return jsonError("Applicants cannot review or approve their own applications.", 403);
-    }
-    const { data, error } = await actor.supabase
-      .from("adoption_applications")
-      .update({ status: body.data.status })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) return jsonError(error.message, 500);
-    const history = await actor.supabase.from("application_status_history").insert({
-      application_id: id,
-      from_status: old.data.status,
-      to_status: body.data.status,
-      changed_by: actor.user.id,
-      note: body.data.note,
+    const { data, error } = await actor.supabase.rpc("transition_application", {
+      p_application_id: id,
+      p_status: body.data.status,
+      p_note: body.data.note ?? null,
     });
-    if (history.error) return jsonError(history.error.message, 500);
-    return jsonOk(data);
+    return error ? jsonError("Invalid or unauthorized application transition.", 409) : jsonOk(data);
   }
   if (path.includes("/ai/") && path.endsWith("/approve")) {
     const body = await parseJson(request, aiReviewRequestSchema);

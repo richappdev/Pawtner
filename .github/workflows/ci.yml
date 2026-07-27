@@ -18,6 +18,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      - name: Start local Supabase and run RLS tests
+        run: |
+          npx supabase start
+          npx supabase db reset --local --yes
+          npm run test:db
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://rlwctljjjvlxrexcgqmg.supabase.co
@@ -43,10 +48,5 @@ jobs:
           test -f docs/firebase-project.md
           test -f apphosting.yaml
           test -f Dockerfile
-      - name: Secret scan (basic)
-        run: |
-          if grep -RInE 'supabase_service_role|sk_live_|BEGIN RSA PRIVATE KEY' \
-            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github . ; then
-            echo "Potential secrets found"
-            exit 1
-          fi
+      - name: Secret scan
+        run: npm run security:secrets

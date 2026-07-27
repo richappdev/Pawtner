@@ -37,9 +37,6 @@ export const petCreateSchema = z.object({
 
 export const petUpdateSchema = petCreateSchema
   .partial()
-  .extend({
-    isPublished: z.boolean().optional(),
-  })
   .refine((data) => Object.keys(data).length > 0, "At least one field must be provided.");
 
 export const adminPetListQuerySchema = z.object({
@@ -52,10 +49,20 @@ export const adminPetListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
-export const adminPetReviewSchema = z.object({
-  action: z.enum(ADMIN_PET_REVIEW_ACTIONS),
-  note: z.string().trim().max(2_000).optional(),
-});
+export const adminPetReviewSchema = z
+  .object({
+    action: z.enum(ADMIN_PET_REVIEW_ACTIONS),
+    note: z.string().trim().max(2_000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.action === "request_changes" && !value.note) {
+      context.addIssue({
+        code: "custom",
+        path: ["note"],
+        message: "A note is required when requesting changes.",
+      });
+    }
+  });
 
 export const adminPetPatchSchema = z
   .object({

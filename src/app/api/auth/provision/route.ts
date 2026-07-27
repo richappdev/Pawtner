@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { z } from "zod";
 
 import { jsonError, jsonOk } from "@/lib/api/http";
 import { getFirebaseAdminAuth, verifyFirebaseIdToken } from "@/lib/firebase/admin";
@@ -21,11 +23,30 @@ export async function POST(request: Request) {
   try {
     const decoded = await verifyFirebaseIdToken(idToken);
     const supabase = createServiceClient();
-    const { data, error } = await supabase.rpc("provision_firebase_identity", {
-      p_firebase_uid: decoded.uid,
-      p_email: decoded.email ?? null,
-      p_display_name: decoded.name ?? decoded.email?.split("@")[0] ?? null,
-    });
+    const existing = await supabase
+      .from("external_identities")
+      .select("user_id")
+      .eq("provider", "firebase")
+      .eq("subject", decoded.uid)
+      .maybeSingle();
+    if (existing.error) return jsonError("Unable to verify pilot access.", 500);
+
+    let data: string | null = existing.data?.user_id ?? null;
+    let error: { message: string } | null = null;
+    if (!data) {
+      const parsed = z.object({ inviteToken: z.string().min(32).max(256) }).safeParse(
+        await request.json().catch(() => null),
+      );
+      if (!parsed.success) return jsonError("A valid pilot invitation is required.", 403);
+      const result = await supabase.rpc("provision_invited_firebase_identity", {
+        p_firebase_uid: decoded.uid,
+        p_email: decoded.email ?? null,
+        p_display_name: decoded.name ?? decoded.email?.split("@")[0] ?? null,
+        p_token_hash: createHash("sha256").update(parsed.data.inviteToken).digest("hex"),
+      });
+      data = result.data as string | null;
+      error = result.error;
+    }
 
     if (error) {
       logger.error("auth.provision.failure", {
@@ -33,7 +54,7 @@ export async function POST(request: Request) {
         firebaseUid: decoded.uid,
         message: error.message,
       });
-      return jsonError(error.message, 500);
+      return jsonError("Invitation is invalid, expired, or already used.", 403);
     }
 
     // Supabase third-party Firebase Auth requires role: authenticated on the JWT.

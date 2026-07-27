@@ -2,6 +2,7 @@
 -- Style matches supabase/tests/hardening.sql (no pgtap dependency).
 
 begin;
+select plan(1);
 
 insert into public.user_profiles (id, email, display_name)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'firebase-mapped@example.test', 'Mapped User')
@@ -52,4 +53,6 @@ begin
   end if;
 end $$;
 
+select pass('Firebase identity provisioning is idempotent and assigns adopter role');
+select * from finish();
 rollback;

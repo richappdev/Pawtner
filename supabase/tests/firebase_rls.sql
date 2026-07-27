@@ -2,6 +2,7 @@
 -- Style matches supabase/tests/hardening.sql (no pgtap dependency).
 
 begin;
+select plan(1);
 
 do $$
 declare
@@ -41,4 +42,6 @@ begin
   end if;
 end $$;
 
+select pass('Firebase RLS helpers and policies use the internal user identity');
+select * from finish();
 rollback;

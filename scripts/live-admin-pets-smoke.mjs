@@ -1,7 +1,7 @@
 const BASE = "https://pawtner-web--pawtner-app-2026.asia-east1.hosted.app";
-const API_KEY = "AIzaSyARUiPOv8fKU1Jv_iraMS1StS0J1mIr3xg";
-const EMAIL = "smoke-admin@pawtner.app";
-const PASSWORD = "SmokeAdmin!fZdwktMObu1p";
+const API_KEY = process.env.PAWTNER_SMOKE_FIREBASE_API_KEY;
+const EMAIL = process.env.PAWTNER_SMOKE_ADMIN_EMAIL;
+const PASSWORD = process.env.PAWTNER_SMOKE_ADMIN_PASSWORD;
 const COOKIE = "pawtner_firebase_id_token";
 
 function assert(cond, msg) {
@@ -10,6 +10,7 @@ function assert(cond, msg) {
 }
 
 async function main() {
+  assert(API_KEY && EMAIL && PASSWORD, "Smoke credentials are provided through environment secrets");
   console.log("=== Live smoke: admin pets ===\n");
 
   // 1) Firebase sign-in

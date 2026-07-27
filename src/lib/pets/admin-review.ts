@@ -1,6 +1,12 @@
 import type { PetStatus } from "@/lib/schemas/pet";
 
-export const ADMIN_PET_REVIEW_ACTIONS = ["hide", "unpublish", "archive", "approve"] as const;
+export const ADMIN_PET_REVIEW_ACTIONS = [
+  "hide",
+  "unpublish",
+  "archive",
+  "approve",
+  "request_changes",
+] as const;
 export type AdminPetReviewAction = (typeof ADMIN_PET_REVIEW_ACTIONS)[number];
 
 export interface AdminPetReviewPatch {
@@ -43,5 +49,10 @@ export function reviewActionToPatch(
         published_at: now.toISOString(),
       };
     }
+    case "request_changes":
+      return {
+        is_published: false,
+        published_at: null,
+      };
   }
 }

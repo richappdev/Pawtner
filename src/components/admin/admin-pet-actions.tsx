@@ -11,6 +11,7 @@ const LABELS: Record<AdminPetReviewAction, string> = {
   unpublish: "下架",
   archive: "封存",
   approve: "核准刊登",
+  request_changes: "要求補件",
 };
 
 export function AdminPetActions({
@@ -24,6 +25,7 @@ export function AdminPetActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<AdminPetReviewAction | null>(null);
+  const [note, setNote] = useState("");
 
   async function run(action: AdminPetReviewAction) {
     setError(null);
@@ -32,7 +34,7 @@ export function AdminPetActions({
       const response = await fetch(`/api/admin/pets/${petId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, note: note.trim() || undefined }),
       });
       const payload = (await response.json()) as { error?: { message?: string } };
       if (!response.ok) {
@@ -51,13 +53,27 @@ export function AdminPetActions({
 
   return (
     <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold text-muted">
+        審核備註
+        <textarea
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={2_000}
+          className="mt-1 min-h-20 w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm text-foreground"
+          placeholder="要求補件時必填；其他動作可選填"
+        />
+      </label>
       <div className="flex flex-wrap gap-2">
         {actions.map((action) => (
           <Button
             key={action}
             type="button"
             variant={action === "approve" ? "primary" : "secondary"}
-            disabled={pending || active !== null}
+            disabled={
+              pending ||
+              active !== null ||
+              (action === "request_changes" && !note.trim())
+            }
             onClick={() => void run(action)}
             className="min-h-9 px-4 text-xs"
           >

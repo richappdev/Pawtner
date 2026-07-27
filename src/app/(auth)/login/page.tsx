@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { AuthForm } from "@/components/auth-form";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
+import { AuthForm } from "@/components/auth-form";
+import { getSessionActor } from "@/lib/auth/session-actor";
+
+export default async function LoginPage() {
+  const session = await getSessionActor();
+  if (session) {
+    redirect("/explore");
+  }
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10">
       <Link href="/" className="display text-3xl">Pawtner</Link>

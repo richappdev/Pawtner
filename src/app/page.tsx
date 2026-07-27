@@ -33,6 +33,7 @@ function AdminPetsIconLink() {
 export default async function LandingPage() {
   const session = await getSessionActor();
   const showAdminPets = session ? canAccessAdmin(session.actor) : false;
+  const isLoggedIn = session !== null;
 
   return (
     <main className="atmosphere relative flex min-h-screen overflow-hidden px-5 py-6">
@@ -41,8 +42,11 @@ export default async function LandingPage() {
           <span className="display text-3xl font-semibold">Pawtner</span>
           <div className="flex items-center gap-3">
             {showAdminPets ? <AdminPetsIconLink /> : null}
-            <Link href="/login" className="text-sm font-semibold underline underline-offset-4">
-              登入
+            <Link
+              href={isLoggedIn ? "/explore" : "/login"}
+              className="text-sm font-semibold underline underline-offset-4"
+            >
+              {isLoggedIn ? "進入主頁" : "登入"}
             </Link>
           </div>
         </header>

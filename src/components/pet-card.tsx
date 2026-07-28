@@ -36,8 +36,8 @@ export function PetCard({ pet }: { pet: PublicPetSummary }) {
         <div className="space-y-4 p-5">
           <div>
             <div className="flex items-start justify-between gap-3">
-              <h2 className="display text-2xl">{pet.name}</h2>
-              <span className="pt-1 text-sm font-bold text-muted">{pet.profileCompleteness}%</span>
+              <h2 className="display min-w-0 flex-1 break-words text-xl leading-tight">{pet.name}</h2>
+              <span className="shrink-0 pt-1 text-sm font-bold text-muted">{pet.profileCompleteness}%</span>
             </div>
             <p className="mt-1 text-sm text-muted">
               {[pet.sex ? SEX_LABELS[pet.sex] : null, age, pet.breed].filter(Boolean).join(" · ")}

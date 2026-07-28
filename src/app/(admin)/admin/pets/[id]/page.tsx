@@ -4,6 +4,11 @@ import { notFound } from "next/navigation";
 import { AdminPetActions } from "@/components/admin/admin-pet-actions";
 import { GovernmentPublicationActions } from "@/components/admin/government-publication-actions";
 import { GovernmentPetEnrichmentForm } from "@/components/admin/government-pet-enrichment-form";
+import {
+  PetAttributeIcon,
+  type PetAttribute,
+  type PetAttributeIconTone,
+} from "@/components/pets/pet-attribute-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getAdminPet } from "@/lib/pets/admin-query";
@@ -105,11 +110,26 @@ interface AdminPetDetail {
   }> | null;
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
+function Field({
+  label,
+  value,
+  attribute,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  attribute?: PetAttribute;
+  tone?: PetAttributeIconTone;
+}) {
   return (
     <div>
-      <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</dt>
-      <dd className="mt-1 text-sm leading-6">{value ?? "—"}</dd>
+      <dt className="flex items-center gap-3 text-xs font-semibold tracking-wide text-muted uppercase">
+        {attribute ? <PetAttributeIcon attribute={attribute} tone={tone} /> : null}
+        <span>{label}</span>
+      </dt>
+      <dd className={attribute ? "mt-1 pl-[3.25rem] text-sm leading-6" : "mt-1 text-sm leading-6"}>
+        {value ?? "—"}
+      </dd>
     </div>
   );
 }
@@ -117,6 +137,15 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 function boolLabel(value: boolean | null | undefined) {
   if (value === null || value === undefined) return "—";
   return value ? "是" : "否";
+}
+
+function valueTone(value: unknown): PetAttributeIconTone {
+  return value === null || value === undefined || value === "" ? "unknown" : "default";
+}
+
+function booleanTone(value: boolean | null | undefined): PetAttributeIconTone {
+  if (value === null || value === undefined) return "unknown";
+  return value ? "positive" : "attention";
 }
 
 export default async function AdminPetDetailPage({
@@ -236,24 +265,59 @@ export default async function AdminPetDetailPage({
 
       <Card className="max-w-3xl">
         <p className="font-semibold">基本資料</p>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label="物種" value={pet.species} />
-          <Field label="品種" value={pet.breed} />
-          <Field label="性別" value={pet.sex} />
-          <Field label="地區" value={pet.region} />
-          <Field label="月齡" value={pet.age_months} />
-          <Field label="體重 kg" value={pet.weight_kg} />
-          <Field label="毛色" value={pet.color} />
-          <Field label="刊登時間" value={pet.published_at ? new Date(pet.published_at).toLocaleString("zh-TW") : "—"} />
-          <Field label="結紮" value={boolLabel(pet.sterilized)} />
-          <Field label="晶片" value={boolLabel(pet.microchipped)} />
-          <Field label="疫苗" value={boolLabel(pet.vaccinated)} />
-          <Field label="驅蟲" value={boolLabel(pet.dewormed)} />
-        </dl>
-        <div className="mt-6 space-y-4">
-          <Field label="個性摘要" value={pet.personality_summary} />
-          <Field label="特殊照護" value={pet.special_care} />
-          <Field label="領養條件" value={pet.adoption_conditions} />
+        <div className="mt-5 space-y-7">
+          <section aria-labelledby="pet-identity-heading">
+            <h3 id="pet-identity-heading" className="eyebrow">基本身分</h3>
+            <dl className="mt-3 grid gap-5 sm:grid-cols-2">
+              <Field label="物種" value={pet.species} attribute="species" tone={valueTone(pet.species)} />
+              <Field label="品種" value={pet.breed} attribute="breed" tone={valueTone(pet.breed)} />
+              <Field label="性別" value={pet.sex} attribute="sex" tone={valueTone(pet.sex)} />
+              <Field label="地區" value={pet.region} attribute="region" tone={valueTone(pet.region)} />
+            </dl>
+          </section>
+
+          <section aria-labelledby="pet-health-heading">
+            <h3 id="pet-health-heading" className="eyebrow">身體健康</h3>
+            <dl className="mt-3 grid gap-5 sm:grid-cols-2">
+              <Field label="月齡" value={pet.age_months} attribute="ageMonths" tone={valueTone(pet.age_months)} />
+              <Field label="體重 kg" value={pet.weight_kg} attribute="weightKg" tone={valueTone(pet.weight_kg)} />
+              <Field label="毛色" value={pet.color} attribute="color" tone={valueTone(pet.color)} />
+              <Field label="結紮" value={boolLabel(pet.sterilized)} attribute="sterilized" tone={booleanTone(pet.sterilized)} />
+              <Field label="晶片" value={boolLabel(pet.microchipped)} attribute="microchipped" tone={booleanTone(pet.microchipped)} />
+              <Field label="疫苗" value={boolLabel(pet.vaccinated)} attribute="vaccinated" tone={booleanTone(pet.vaccinated)} />
+              <Field label="驅蟲" value={boolLabel(pet.dewormed)} attribute="dewormed" tone={booleanTone(pet.dewormed)} />
+            </dl>
+          </section>
+
+          <section aria-labelledby="pet-matching-heading">
+            <h3 id="pet-matching-heading" className="eyebrow">配對資訊</h3>
+            <dl className="mt-3 grid gap-5 sm:grid-cols-2">
+              <Field
+                label="刊登時間"
+                value={pet.published_at ? new Date(pet.published_at).toLocaleString("zh-TW") : "—"}
+                attribute="publishedAt"
+                tone={valueTone(pet.published_at)}
+              />
+              <Field
+                label="個性摘要"
+                value={pet.personality_summary}
+                attribute="personality"
+                tone={valueTone(pet.personality_summary)}
+              />
+              <Field
+                label="特殊照護"
+                value={pet.special_care}
+                attribute="specialCare"
+                tone={valueTone(pet.special_care)}
+              />
+              <Field
+                label="領養條件"
+                value={pet.adoption_conditions}
+                attribute="adoptionConditions"
+                tone={valueTone(pet.adoption_conditions)}
+              />
+            </dl>
+          </section>
         </div>
       </Card>
 

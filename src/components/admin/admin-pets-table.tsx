@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { remainingSelectedPetIds } from "@/lib/pets/admin-bulk-selection";
+import { singleRelatedRecord } from "@/lib/pets/source-record";
 import type {
   PetSourcePublicationStatus,
   PetSourceQualityStatus,
@@ -29,7 +30,14 @@ export interface AdminPetListItem {
   is_published: boolean;
   updated_at: string;
   foster_profiles?: { display_name?: string | null } | null;
-  pet_source_records?: Array<{
+  pet_source_records?: {
+    shelter_name?: string | null;
+    last_seen_at?: string | null;
+    availability?: string | null;
+    quality_status?: PetSourceQualityStatus;
+    publication_status?: PetSourcePublicationStatus;
+    hold_reason?: string | null;
+  } | Array<{
     shelter_name?: string | null;
     last_seen_at?: string | null;
     availability?: string | null;
@@ -251,7 +259,7 @@ export function AdminPetsTable({
             </thead>
             <tbody>
               {pets.map((pet) => {
-                const sourceRecord = pet.pet_source_records?.[0];
+                const sourceRecord = singleRelatedRecord(pet.pet_source_records);
                 return (
                   <tr key={pet.id} className="border-b align-top last:border-b-0">
                     <td className="px-4 py-3">

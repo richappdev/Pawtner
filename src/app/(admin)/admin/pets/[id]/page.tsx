@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getAdminPet } from "@/lib/pets/admin-query";
+import { singleRelatedRecord } from "@/lib/pets/source-record";
 import type {
   PetSourcePublicationStatus,
   PetSourceQualityStatus,
@@ -76,7 +77,23 @@ interface AdminPetDetail {
     is_public: boolean;
     sort_order: number;
   }> | null;
-  pet_source_records?: Array<{
+  pet_source_records?: {
+    external_sub_id: string | null;
+    shelter_name: string | null;
+    shelter_address: string | null;
+    shelter_phone: string | null;
+    official_url: string | null;
+    adoption_open_at: string | null;
+    last_seen_at: string;
+    availability: string;
+    quality_status: PetSourceQualityStatus;
+    publication_status: PetSourcePublicationStatus;
+    reviewed_at: string | null;
+    approved_at: string | null;
+    hold_reason: string | null;
+    last_validated_at: string | null;
+    pet_sources?: { dataset_name: string; attribution: string; dataset_url: string; license_name: string; license_url: string } | null;
+  } | Array<{
     external_sub_id: string | null;
     shelter_name: string | null;
     shelter_address: string | null;
@@ -179,7 +196,7 @@ export default async function AdminPetDetailPage({
   const traits = pet.pet_traits?.[0];
   const health = pet.pet_health_records ?? [];
   const media = [...(pet.pet_media ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-  const source = pet.pet_source_records?.[0];
+  const source = singleRelatedRecord(pet.pet_source_records);
   const enrichment = pet.pet_editorial_overrides?.[0];
 
   return (

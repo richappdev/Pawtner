@@ -19,13 +19,13 @@ function supabaseMock() {
       id: GOVERNMENT_ID,
       source_type: "government",
       review_status: "approved",
-      pet_source_records: [{
+      pet_source_records: {
         publication_status: "approved",
         quality_status: "clean",
         availability: "open",
         adoption_open_at: null,
         pet_sources: { enabled: true },
-      }],
+      },
     },
     {
       id: INELIGIBLE_ID,

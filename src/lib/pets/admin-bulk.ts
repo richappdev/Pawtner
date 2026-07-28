@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { singleRelatedRecord } from "@/lib/pets/source-record";
 import type { AdminPetBulkActionInput } from "@/lib/schemas/pet";
 
 export type AdminPetBulkResultStatus = "succeeded" | "skipped" | "failed";
@@ -14,7 +15,13 @@ interface BulkPet {
   id: string;
   source_type: "private_foster" | "government";
   review_status: string;
-  pet_source_records?: Array<{
+  pet_source_records?: {
+    publication_status: string;
+    quality_status: string;
+    availability: string;
+    adoption_open_at: string | null;
+    pet_sources?: { enabled?: boolean } | null;
+  } | Array<{
     publication_status: string;
     quality_status: string;
     availability: string;
@@ -52,7 +59,7 @@ function publishIneligibility(pet: BulkPet, now: Date) {
       : "只有待審核的中途毛孩可以批次刊登。";
   }
 
-  const source = pet.pet_source_records?.[0];
+  const source = singleRelatedRecord(pet.pet_source_records);
   if (!source) return "找不到政府來源紀錄。";
   if (source.publication_status !== "approved") return "政府資料必須先通過核准。";
   if (source.quality_status === "blocked") return "資料品質為 blocked，無法刊登。";

@@ -2,8 +2,17 @@ export type NormalizedSpecies = "dog" | "cat" | "other";
 export type NormalizedSex = "male" | "female" | "unknown";
 export type NormalizedAgeBand = "child" | "adult" | "senior" | "unknown";
 export type NormalizedBodySize = "small" | "medium" | "large" | "unknown";
+export type SourceQualityStatus = "clean" | "warning" | "blocked";
+export type SourceIssueSeverity = "warning" | "blocker";
 
 export type MoaRawRecord = Record<string, unknown>;
+
+export interface SourceDataIssue {
+  code: string;
+  field: string;
+  severity: SourceIssueSeverity;
+  message: string;
+}
 
 export interface MappedMoaPet {
   externalId: string;
@@ -32,6 +41,8 @@ export interface MappedMoaPet {
   imageUrl: string | null;
   publishEligible: boolean;
   availability: "open" | "future" | "unavailable";
+  qualityStatus: SourceQualityStatus;
+  issues: SourceDataIssue[];
   contentHash: string;
   rawPayload: MoaRawRecord;
 }
@@ -138,6 +149,7 @@ export async function mapMoaRecord(
   const species = mapMoaSpecies(raw.animal_kind);
   const externalSubId = text(raw.animal_subid);
   const sourceStatus = text(raw.animal_status)?.toUpperCase();
+  const rawOpenDate = text(raw.animal_opendate);
   const adoptionOpenAt = isoDate(raw.animal_opendate);
   const isFuture = adoptionOpenAt ? new Date(adoptionOpenAt).valueOf() > now.valueOf() : false;
   const publishEligible = sourceStatus === "OPEN" && !isFuture;
@@ -145,26 +157,82 @@ export async function mapMoaRecord(
   const shelterAddress = text(raw.shelter_address);
   const foundLocation = text(raw.animal_foundplace);
   const bacterin = nullableBoolean(raw.animal_bacterin);
+  const shelterName = text(raw.shelter_name) ?? text(raw.animal_place);
+  const shelterPhone = text(raw.shelter_tel);
+  const imageUrl = validGovernmentImage(raw.album_file);
+  const sex = mapMoaSex(raw.animal_sex);
+  const ageBand = mapMoaAge(raw.animal_age);
+  const bodySize = mapMoaBodySize(raw.animal_bodytype);
+  const breed = text(raw.animal_Variety);
+  const issues: SourceDataIssue[] = [];
+  const issue = (
+    code: string,
+    field: string,
+    severity: SourceIssueSeverity,
+    message: string,
+  ) => issues.push({ code, field, severity, message });
+
+  if (!text(raw.animal_kind)) {
+    issue("missing_species", "animal_kind", "blocker", "Official species is required.");
+  }
+  if (!shelterName) {
+    issue("missing_shelter_name", "shelter_name", "blocker", "Official shelter name is required.");
+  }
+  if (!shelterPhone) {
+    issue("missing_shelter_phone", "shelter_tel", "blocker", "Official shelter phone is required.");
+  }
+  if (!shelterAddress) {
+    issue("missing_shelter_address", "shelter_address", "blocker", "Official shelter address is required.");
+  }
+  if (rawOpenDate && !adoptionOpenAt) {
+    issue("invalid_adoption_open_date", "animal_opendate", "blocker", "Adoption-open date is invalid.");
+  }
+  if (!imageUrl) {
+    issue("missing_or_invalid_image", "album_file", "warning", "The official feed does not provide an allowed image.");
+  }
+  if (sex === "unknown") {
+    issue("unknown_sex", "animal_sex", "warning", "Sex could not be normalized.");
+  }
+  if (ageBand === "unknown") {
+    issue("unknown_age", "animal_age", "warning", "Age band could not be normalized.");
+  }
+  if (bodySize === "unknown") {
+    issue("unknown_body_size", "animal_bodytype", "warning", "Body size could not be normalized.");
+  }
+  if (!breed) {
+    issue("missing_breed", "animal_Variety", "warning", "Breed is not provided.");
+  }
+  if (!foundLocation) {
+    issue("missing_found_location", "animal_foundplace", "warning", "Found location is not provided.");
+  }
+  if (bacterin === null) {
+    issue("unknown_rabies_vaccination", "animal_bacterin", "warning", "Rabies vaccination is unknown.");
+  }
+  const qualityStatus: SourceQualityStatus = issues.some((entry) => entry.severity === "blocker")
+    ? "blocked"
+    : issues.length > 0
+      ? "warning"
+      : "clean";
   const normalizedForHash = {
     externalId,
     externalSubId,
     species,
-    breed: text(raw.animal_Variety),
-    sex: mapMoaSex(raw.animal_sex),
-    ageBand: mapMoaAge(raw.animal_age),
-    bodySize: mapMoaBodySize(raw.animal_bodytype),
+    breed,
+    sex,
+    ageBand,
+    bodySize,
     color: text(raw.animal_colour),
     status: sourceStatus,
     sterilized: nullableBoolean(raw.animal_sterilization),
     bacterin,
     shelterId: text(raw.animal_shelter_pkid),
-    shelterName: text(raw.shelter_name) ?? text(raw.animal_place),
+    shelterName,
     shelterAddress,
-    shelterPhone: text(raw.shelter_tel),
+    shelterPhone,
     adoptionOpenAt,
     sourceCreatedAt: isoDate(raw.animal_createtime),
     sourceUpdatedAt: isoDate(raw.animal_update) ?? isoDate(raw.cDate),
-    imageUrl: validGovernmentImage(raw.album_file),
+    imageUrl,
   };
 
   return {
@@ -194,6 +262,8 @@ export async function mapMoaRecord(
     imageUrl: normalizedForHash.imageUrl,
     publishEligible,
     availability,
+    qualityStatus,
+    issues,
     contentHash: await sha256(normalizedForHash),
     rawPayload: raw,
   };

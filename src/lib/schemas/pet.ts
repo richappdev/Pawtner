@@ -18,6 +18,14 @@ export const petSpeciesSchema = z.enum(["dog", "cat", "other"]);
 export const petSourceTypeSchema = z.enum(["private_foster", "government"]);
 export const petAgeBandSchema = z.enum(["child", "adult", "senior", "unknown"]);
 export const petBodySizeSchema = z.enum(["small", "medium", "large", "unknown"]);
+export const petSourceQualityStatusSchema = z.enum(["pending", "clean", "warning", "blocked"]);
+export const petSourcePublicationStatusSchema = z.enum([
+  "pending_review",
+  "approved",
+  "published",
+  "held",
+  "unpublished_source_change",
+]);
 
 export const petCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -50,6 +58,8 @@ export const adminPetListQuerySchema = z.object({
   status: petStatusSchema.optional(),
   species: petSpeciesSchema.optional(),
   source: petSourceTypeSchema.optional(),
+  qualityStatus: petSourceQualityStatusSchema.optional(),
+  publicationStatus: petSourcePublicationStatusSchema.optional(),
   isPublished: z
     .enum(["true", "false"])
     .optional()
@@ -72,6 +82,21 @@ export const adminPetReviewSchema = z
     }
   });
 
+export const governmentPetPublicationSchema = z
+  .object({
+    action: z.enum(["approve", "publish", "hold", "unpublish"]),
+    reason: z.string().trim().max(2_000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (["hold", "unpublish"].includes(value.action) && !value.reason) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "A reason is required to hold or unpublish a listing.",
+      });
+    }
+  });
+
 export const adminPetPatchSchema = z
   .object({
     status: petStatusSchema.optional(),
@@ -89,6 +114,8 @@ export const adminPetPatchSchema = z
 export type PetStatus = z.infer<typeof petStatusSchema>;
 export type PetSpecies = z.infer<typeof petSpeciesSchema>;
 export type PetSourceType = z.infer<typeof petSourceTypeSchema>;
+export type PetSourceQualityStatus = z.infer<typeof petSourceQualityStatusSchema>;
+export type PetSourcePublicationStatus = z.infer<typeof petSourcePublicationStatusSchema>;
 export type PetCreateInput = z.infer<typeof petCreateSchema>;
 export type PetUpdateInput = z.infer<typeof petUpdateSchema>;
 export type AdminPetReviewInput = z.infer<typeof adminPetReviewSchema>;

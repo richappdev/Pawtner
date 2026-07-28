@@ -19,6 +19,8 @@ export default async function AdminPetsPage({
     status: undefined,
     species: undefined,
     source: undefined,
+    qualityStatus: undefined,
+    publicationStatus: undefined,
     isPublished: undefined,
     q: undefined,
   };
@@ -60,6 +62,8 @@ export default async function AdminPetsPage({
             status: filters.status,
             species: filters.species,
             source: filters.source,
+            qualityStatus: filters.qualityStatus,
+            publicationStatus: filters.publicationStatus,
             isPublished: filters.isPublished === undefined ? undefined : filters.isPublished ? "true" : "false",
             q: filters.q,
           }}

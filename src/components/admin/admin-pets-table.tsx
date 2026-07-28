@@ -1,9 +1,16 @@
 import Link from "next/link";
 
 import { AdminPetActions } from "@/components/admin/admin-pet-actions";
+import { GovernmentPublicationActions } from "@/components/admin/government-publication-actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import type { PetSourceType, PetSpecies, PetStatus } from "@/lib/schemas/pet";
+import type {
+  PetSourcePublicationStatus,
+  PetSourceQualityStatus,
+  PetSourceType,
+  PetSpecies,
+  PetStatus,
+} from "@/lib/schemas/pet";
 
 export interface AdminPetListItem {
   id: string;
@@ -19,6 +26,9 @@ export interface AdminPetListItem {
     shelter_name?: string | null;
     last_seen_at?: string | null;
     availability?: string | null;
+    quality_status?: PetSourceQualityStatus;
+    publication_status?: PetSourcePublicationStatus;
+    hold_reason?: string | null;
   }> | null;
 }
 
@@ -27,46 +37,73 @@ const STATUS_OPTIONS: PetStatus[] = [
   "trial_adoption", "adopted", "hidden", "archived",
 ];
 
+const QUALITY_OPTIONS: PetSourceQualityStatus[] = ["pending", "clean", "warning", "blocked"];
+const PUBLICATION_OPTIONS: PetSourcePublicationStatus[] = [
+  "pending_review", "approved", "published", "held", "unpublished_source_change",
+];
+
 export function AdminPetsTable({
   pets,
   filters,
 }: {
   pets: AdminPetListItem[];
-  filters: { status?: string; species?: string; source?: string; isPublished?: string; q?: string };
+  filters: {
+    status?: string;
+    species?: string;
+    source?: string;
+    qualityStatus?: string;
+    publicationStatus?: string;
+    isPublished?: string;
+    q?: string;
+  };
 }) {
   return (
     <div className="mt-8 space-y-6">
-      <Card className="max-w-5xl">
-        <form method="get" className="grid gap-3 md:grid-cols-5">
+      <Card>
+        <form method="get" className="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
           <label className="text-sm"><span className="mb-1 block font-semibold">搜尋</span><input name="q" defaultValue={filters.q ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm" /></label>
-          <label className="text-sm"><span className="mb-1 block font-semibold">狀態</span><select name="status" defaultValue={filters.status ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{STATUS_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className="text-sm"><span className="mb-1 block font-semibold">動物狀態</span><select name="status" defaultValue={filters.status ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{STATUS_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">物種</span><select name="species" defaultValue={filters.species ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="dog">dog</option><option value="cat">cat</option><option value="other">other</option></select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">來源</span><select name="source" defaultValue={filters.source ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="private_foster">Pawtner 中途</option><option value="government">政府資料</option></select></label>
-          <label className="text-sm"><span className="mb-1 block font-semibold">發布</span><select name="isPublished" defaultValue={filters.isPublished ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="true">已發布</option><option value="false">未發布</option></select></label>
-          <div className="md:col-span-5"><button type="submit" className="min-h-11 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white">套用篩選</button></div>
+          <label className="text-sm"><span className="mb-1 block font-semibold">資料品質</span><select name="qualityStatus" defaultValue={filters.qualityStatus ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{QUALITY_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className="text-sm"><span className="mb-1 block font-semibold">發布流程</span><select name="publicationStatus" defaultValue={filters.publicationStatus ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{PUBLICATION_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className="text-sm"><span className="mb-1 block font-semibold">公開狀態</span><select name="isPublished" defaultValue={filters.isPublished ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="true">已公開</option><option value="false">未公開</option></select></label>
+          <div className="xl:col-span-7"><button type="submit" className="min-h-11 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white">套用篩選</button></div>
         </form>
       </Card>
 
-      {pets.length === 0 ? <Card><p>沒有符合條件的動物。</p></Card> : (
+      {pets.length === 0 ? <Card><p>沒有符合篩選條件的動物。</p></Card> : (
         <div className="overflow-x-auto rounded-2xl border bg-surface">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-surface-soft text-xs uppercase tracking-wide text-muted">
-              <tr>{["名稱", "來源", "物種", "地區", "狀態", "發布", "照護單位", "更新", "操作"].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr>
+              <tr>{["名稱", "來源", "物種", "地區", "官方狀態", "資料品質", "發布流程", "公開", "提供單位", "最後同步", "操作"].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr>
             </thead>
             <tbody>
               {pets.map((pet) => {
                 const sourceRecord = pet.pet_source_records?.[0];
                 return (
-                  <tr key={pet.id} className="border-b last:border-b-0">
+                  <tr key={pet.id} className="border-b align-top last:border-b-0">
                     <td className="px-4 py-3"><Link href={`/admin/pets/${pet.id}`} className="font-semibold text-accent hover:underline">{pet.name}</Link></td>
                     <td className="px-4 py-3"><Badge variant={pet.source_type === "government" ? "pending" : "neutral"}>{pet.source_type === "government" ? "政府" : "中途"}</Badge></td>
                     <td className="px-4 py-3">{pet.species}</td>
                     <td className="px-4 py-3">{pet.region ?? "—"}</td>
                     <td className="px-4 py-3"><Badge>{sourceRecord?.availability ?? pet.status}</Badge></td>
-                    <td className="px-4 py-3"><Badge variant={pet.is_published ? "success" : "pending"}>{pet.is_published ? "published" : "draft"}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={sourceRecord?.quality_status === "blocked" ? "danger" : sourceRecord?.quality_status === "clean" ? "success" : "pending"}>{sourceRecord?.quality_status ?? "—"}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={sourceRecord?.publication_status === "published" ? "success" : "pending"}>{sourceRecord?.publication_status ?? "private review"}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={pet.is_published ? "success" : "pending"}>{pet.is_published ? "published" : "not public"}</Badge></td>
                     <td className="px-4 py-3">{sourceRecord?.shelter_name ?? pet.foster_profiles?.display_name ?? "—"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-muted">{new Date(sourceRecord?.last_seen_at ?? pet.updated_at).toLocaleString("zh-TW")}</td>
-                    <td className="px-4 py-3"><AdminPetActions petId={pet.id} sourceType={pet.source_type} actions={pet.source_type === "government" ? ["hide", "unpublish"] : ["hide", "unpublish", "archive"]} /></td>
+                    <td className="min-w-56 px-4 py-3">
+                      {pet.source_type === "government" && sourceRecord?.publication_status && sourceRecord.quality_status ? (
+                        <GovernmentPublicationActions
+                          petId={pet.id}
+                          publicationStatus={sourceRecord.publication_status}
+                          qualityStatus={sourceRecord.quality_status}
+                        />
+                      ) : (
+                        <AdminPetActions petId={pet.id} actions={["hide", "unpublish", "archive"]} />
+                      )}
+                    </td>
                   </tr>
                 );
               })}

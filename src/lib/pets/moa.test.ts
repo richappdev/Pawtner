@@ -52,7 +52,9 @@ describe("MOA pet mapping", () => {
       rabiesVaccinated: false,
       publishEligible: true,
       availability: "open",
+      qualityStatus: "warning",
     });
+    expect(mapped?.issues.map((issue) => issue.code)).toContain("missing_breed");
     expect(mapped?.contentHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -68,6 +70,29 @@ describe("MOA pet mapping", () => {
     expect(mapped?.publishEligible).toBe(false);
     expect(mapped?.availability).toBe("future");
     expect(mapped?.imageUrl).toBeNull();
+    expect(mapped?.qualityStatus).toBe("blocked");
+    expect(mapped?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "missing_shelter_phone", severity: "blocker" }),
+      expect.objectContaining({ code: "missing_or_invalid_image", severity: "warning" }),
+    ]));
+  });
+
+  it("blocks invalid non-empty adoption dates", async () => {
+    const mapped = await mapMoaRecord({
+      animal_id: 8,
+      animal_kind: "狗",
+      animal_status: "OPEN",
+      animal_opendate: "not-a-date",
+      shelter_name: "測試收容所",
+      shelter_tel: "02-12345678",
+      shelter_address: "臺北市",
+    });
+
+    expect(mapped?.qualityStatus).toBe("blocked");
+    expect(mapped?.issues).toContainEqual(expect.objectContaining({
+      code: "invalid_adoption_open_date",
+      severity: "blocker",
+    }));
   });
 
   it("skips rows without a government animal id", async () => {

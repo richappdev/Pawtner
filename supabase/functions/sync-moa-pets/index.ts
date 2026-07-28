@@ -138,6 +138,7 @@ Deno.serve(async (request) => {
   let invalidCount = 0;
   let pageNumber = 0;
   let batchNumber = 0;
+  const qualityCounts = { clean: 0, warning: 0, blocked: 0 };
   try {
     for (let skip = 0; ; skip += PAGE_SIZE) {
       pageNumber += 1;
@@ -147,6 +148,7 @@ Deno.serve(async (request) => {
       const pageInvalidCount = page.length - mapped.length;
       invalidCount += pageInvalidCount;
       completeCount += mapped.length;
+      for (const record of mapped) qualityCounts[record.qualityStatus] += 1;
       log("info", "page_mapped", {
         runId,
         pageNumber,
@@ -155,6 +157,7 @@ Deno.serve(async (request) => {
         invalidCount: pageInvalidCount,
         cumulativeValidCount: completeCount,
         cumulativeInvalidCount: invalidCount,
+        qualityCounts,
       });
 
       for (let offset = 0; offset < mapped.length; offset += BATCH_SIZE) {
@@ -166,7 +169,7 @@ Deno.serve(async (request) => {
           p_records: batch,
         });
         if (error) throw new Error(error.message);
-        log("info", "batch_ingested", {
+        log("info", "batch_staged", {
           runId,
           pageNumber,
           batchNumber,
@@ -179,6 +182,12 @@ Deno.serve(async (request) => {
     }
 
     if (completeCount === 0) throw new Error("MOA returned no valid records");
+    log("info", "merge_started", {
+      runId,
+      completeCount,
+      invalidCount,
+      qualityCounts,
+    });
     const { data: result, error } = await db.rpc("finish_pet_source_sync", {
       p_run_id: runId,
       p_complete_count: completeCount,
@@ -194,10 +203,11 @@ Deno.serve(async (request) => {
       batchCount: batchNumber,
       completeCount,
       invalidCount,
+      qualityCounts,
       reconciliation: result,
       durationMs: Math.round(performance.now() - invocationStartedAt),
     });
-    return json({ runId, dryRun, completeCount, invalidCount, reconciliation: result });
+    return json({ runId, dryRun, completeCount, invalidCount, qualityCounts, reconciliation: result });
   } catch (error) {
     const message = errorMessage(error);
     const { error: failureRecordError } = await db.rpc("fail_pet_source_sync", {
@@ -212,6 +222,7 @@ Deno.serve(async (request) => {
       batchCount: batchNumber,
       completeCount,
       invalidCount,
+      qualityCounts,
       error: message,
       failureRecorded: !failureRecordError,
       failureRecordError: failureRecordError?.message,

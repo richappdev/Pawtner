@@ -83,9 +83,29 @@ Important behavior:
 ### Government data synchronization
 
 The `sync-moa-pets` Supabase Edge Function fetches the MOA API in 1,000-record pages, validates and
-hashes each record, retries transient failures, and sends atomic batches through service-role-only
-RPCs. Missing-record reconciliation happens only after a complete successful fetch. Empty,
-incomplete, or sharply reduced results are rejected.
+hashes each record, retries transient failures, and writes service-role-only, run-scoped staging
+batches. No live pet is changed until the complete feed passes the count and 50% safety guards; the
+database then merges the staged feed atomically. Missing-record reconciliation happens only after
+that complete successful fetch. Empty, incomplete, duplicate, or sharply reduced results are
+rejected.
+
+Government publication is intentionally separate from synchronization:
+
+1. **Sync and stage:** normalized data, private raw payload, content hash, and quality issues are
+   staged for one sync run.
+2. **Validate and clean:** required shelter/species/date problems are `blocked`; incomplete optional
+   data is a `warning`. A successful complete run writes the live source record and issue queue.
+3. **Wait for review:** new and reappearing listings enter `pending_review`, remain hidden, and are
+   never auto-published by sync.
+4. **Approve:** staff reviews source fields and enrichment, then moves a non-blocked record to
+   `approved`.
+5. **Publish:** staff explicitly publishes an approved record. The database rechecks official
+   availability, adoption-open date, quality, source state, and editorial hold in one transaction.
+
+Official closure, future availability, a new blocker, or disappearance from a complete feed
+immediately unpublishes a listing as `unpublished_source_change`. Reappearance returns it to
+`pending_review`; it does not restore publication automatically. Every manual and automatic
+publication transition is recorded in `pet_publication_events`.
 
 The intended production schedule is daily at **10:30 UTC / 18:30 Taiwan time** through Supabase
 Cron. Manual dry runs and real syncs are available to administrators from `/admin/pets`.

@@ -17,6 +17,7 @@ import {
   adminPetListQuerySchema,
   adminPetPatchSchema,
   adminPetReviewSchema,
+  governmentPetPublicationSchema,
   petCreateSchema,
   petUpdateSchema,
 } from "@/lib/schemas/pet";
@@ -199,6 +200,8 @@ export async function GET(request: Request) {
         status: parsed.data.status,
         species: parsed.data.species,
         source: parsed.data.source,
+        qualityStatus: parsed.data.qualityStatus,
+        publicationStatus: parsed.data.publicationStatus,
         isPublished: parsed.data.isPublished,
         q: parsed.data.q,
       });
@@ -538,6 +541,22 @@ export async function POST(request: Request) {
     if (error) return jsonError("Unable to complete pet review.", 409);
     return jsonOk(data);
   }
+  if (path.startsWith("/api/admin/pets/") && path.endsWith("/government-publication")) {
+    const actor = await requireActor(request);
+    if (!("actor" in actor)) return actor.response;
+    if (!canManagePet(actor.actor, {})) return jsonError("Pet management permission is required.", 403);
+    const id = segmentId(request, "pets");
+    if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const body = await parseJson(request, governmentPetPublicationSchema);
+    if ("response" in body) return body.response;
+    const { data, error } = await actor.supabase.rpc("manage_government_pet_publication", {
+      p_pet_id: id,
+      p_action: body.data.action,
+      p_reason: body.data.reason ?? null,
+    });
+    if (error) return jsonError(error.message, 409);
+    return jsonOk(data);
+  }
   if (path === "/api/admin/pet-sources/moa/sync") {
     const actor = await requireActor(request);
     if (!("actor" in actor)) return actor.response;
@@ -633,14 +652,9 @@ export async function PATCH(request: Request) {
     if (existing.error) return jsonError(existing.error.message, 500);
     if (!existing.data) return jsonError("Pet not found.", 404);
     if (existing.data.source_type === "government") {
-      if (body.data.status !== undefined && !["available", "hidden"].includes(body.data.status)) {
-        return jsonError("Government source status is read-only; staff may only hide or show the listing.", 409);
+      if (body.data.status !== undefined || body.data.isPublished !== undefined) {
+        return jsonError("Use the government publication workflow to change visibility.", 409);
       }
-      const hidden = body.data.isPublished === false || body.data.status === "hidden"
-        ? true
-        : body.data.isPublished === true || body.data.status === "available"
-          ? false
-          : undefined;
       const overlay = {
         pet_id: id,
         display_name: body.data.displayName,
@@ -648,7 +662,6 @@ export async function PATCH(request: Request) {
         special_care: body.data.specialCare,
         adoption_conditions: body.data.adoptionConditions,
         tags: body.data.tags,
-        ...(hidden === undefined ? {} : { is_hidden: hidden }),
         updated_at: new Date().toISOString(),
       };
       const { data, error } = await actor.supabase

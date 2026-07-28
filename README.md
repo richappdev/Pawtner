@@ -113,7 +113,7 @@ Cron. Manual dry runs and real syncs are available to administrators from `/admi
 Required server-only configuration:
 
 ```env
-FEATURE_GOVERNMENT_PETS_ENABLED=false
+FEATURE_GOVERNMENT_PETS_ENABLED=true
 MOA_SYNC_SECRET=
 ```
 
@@ -122,7 +122,27 @@ Government data has two release gates:
 1. `FEATURE_GOVERNMENT_PETS_ENABLED` controls web application visibility.
 2. `pet_sources.public_enabled` controls visibility in the public database read model.
 
-Both remain disabled during initial import and inspection. See
+The application feature flag is configured in `apphosting.yaml` and takes effect after a Firebase
+App Hosting deployment. The MOA source gate is managed in Supabase:
+
+```sql
+-- Enable public MOA listings after the application deployment is healthy.
+update public.pet_sources
+set public_enabled = true,
+    updated_at = now()
+where source_key = 'moa-animal-adoption';
+
+-- Verify the ingestion and public-visibility switches.
+select source_key, enabled, public_enabled
+from public.pet_sources
+where source_key = 'moa-animal-adoption';
+```
+
+For a controlled rollout, deploy the application flag first while `public_enabled` is still false,
+then set `public_enabled = true` as the final release switch. Setting `public_enabled = false`
+immediately hides all government listings without requiring an application deployment.
+
+During initial import and inspection, keep both gates disabled. See
 [Government pet rollout](docs/government-pet-rollout.md) for secrets, deployment, staged enablement,
 Cron activation, and monitoring.
 

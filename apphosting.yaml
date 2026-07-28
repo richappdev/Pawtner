@@ -93,7 +93,7 @@ env:
       - RUNTIME
 
   - variable: FEATURE_GOVERNMENT_PETS_ENABLED
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME

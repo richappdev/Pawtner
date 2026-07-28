@@ -2,8 +2,9 @@ import { AdminPetsTable, type AdminPetListItem } from "@/components/admin/admin-
 import { GovernmentSyncPanel } from "@/components/admin/government-sync-panel";
 import { Card } from "@/components/ui/card";
 import { listAdminPets } from "@/lib/pets/admin-query";
-import { adminPetListQuerySchema } from "@/lib/schemas/pet";
+import { adminPetPageQuerySchema } from "@/lib/schemas/pet";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function AdminPetsPage({
   searchParams,
@@ -14,7 +15,7 @@ export default async function AdminPetsPage({
   const normalized = Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
   );
-  const parsed = adminPetListQuerySchema.safeParse(normalized);
+  const parsed = adminPetPageQuerySchema.safeParse(normalized);
   const filters = parsed.success ? parsed.data : {
     status: undefined,
     species: undefined,
@@ -23,10 +24,17 @@ export default async function AdminPetsPage({
     publicationStatus: undefined,
     isPublished: undefined,
     q: undefined,
+    page: 1,
+    pageSize: 10,
   };
+  const offset = (filters.page - 1) * filters.pageSize;
   const supabase = await createClient();
-  const [{ data, error }, { data: source }, { data: runs }] = await Promise.all([
-    listAdminPets(supabase, filters),
+  const [{ data, error, count }, { data: source }, { data: runs }] = await Promise.all([
+    listAdminPets(supabase, {
+      ...filters,
+      limit: filters.pageSize,
+      offset,
+    }),
     supabase
       .from("pet_sources")
       .select("last_successful_sync_at,last_successful_record_count")
@@ -38,6 +46,17 @@ export default async function AdminPetsPage({
       .order("started_at", { ascending: false })
       .limit(1),
   ]);
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+
+  if (!error && filters.page > totalPages) {
+    const canonical = new URLSearchParams();
+    for (const [key, value] of Object.entries(normalized)) {
+      if (value !== undefined) canonical.set(key, value);
+    }
+    canonical.set("page", String(totalPages));
+    redirect(`/admin/pets?${canonical.toString()}`);
+  }
 
   return (
     <main className="w-full p-6 md:p-10">
@@ -57,7 +76,8 @@ export default async function AdminPetsPage({
         <Card className="mt-8 max-w-2xl"><p className="font-semibold">無法載入動物列表。</p></Card>
       ) : (
         <AdminPetsTable
-          pets={(data ?? []) as AdminPetListItem[]}
+          key={`${filters.page}:${filters.pageSize}:${JSON.stringify(filters)}`}
+          pets={(data ?? []) as unknown as AdminPetListItem[]}
           filters={{
             status: filters.status,
             species: filters.species,
@@ -67,6 +87,10 @@ export default async function AdminPetsPage({
             isPublished: filters.isPublished === undefined ? undefined : filters.isPublished ? "true" : "false",
             q: filters.q,
           }}
+          page={filters.page}
+          pageSize={filters.pageSize}
+          total={total}
+          totalPages={totalPages}
         />
       )}
     </main>

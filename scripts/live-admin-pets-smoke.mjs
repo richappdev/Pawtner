@@ -55,15 +55,15 @@ async function main() {
   const deniedRes = await fetch(`${BASE}/api/admin/pets`);
   assert(deniedRes.status === 401 || deniedRes.status === 403, `Unauthenticated pets API blocked (${deniedRes.status})`);
 
-  // 5) Home page SSR with admin cookie — look for /admin/pets link
+  // 5) Home page SSR with admin cookie — look for the admin overview link
   const homeRes = await fetch(BASE + "/", {
     headers: { Cookie: cookieHeader },
     cache: "no-store",
   });
   const homeHtml = await homeRes.text();
   assert(homeRes.ok, `GET / (${homeRes.status})`);
-  const hasAdminLink = homeHtml.includes('href="/admin/pets"') || homeHtml.includes('href=\\"/admin/pets\\"');
-  assert(hasAdminLink, "Home page includes /admin/pets shortcut for admin session");
+  const hasAdminLink = homeHtml.includes('href="/admin"') || homeHtml.includes('href=\\"/admin\\"');
+  assert(hasAdminLink, "Home page includes /admin overview shortcut for admin session");
 
   // 6) Admin pets page SSR
   const pageRes = await fetch(`${BASE}/admin/pets`, {

@@ -42,8 +42,8 @@ export function AdopterNav({
               );
             })}
             {showAdminPetsShortcut ? (
-              <Link href="/admin/pets" className="ml-2 min-h-11 rounded-xl border px-4 py-3 text-sm font-bold text-accent">
-                管理毛孩
+              <Link href="/admin" className="ml-2 min-h-11 rounded-xl border px-4 py-3 text-sm font-bold text-accent">
+                管理後台
               </Link>
             ) : null}
           </nav>
@@ -53,11 +53,11 @@ export function AdopterNav({
       <nav aria-label="領養者導覽" className="fixed inset-x-0 bottom-0 z-30 border-t bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {showAdminPetsShortcut ? (
           <Link
-            href="/admin/pets"
-            aria-label="管理毛孩"
+            href="/admin"
+            aria-label="管理後台"
             className="absolute -top-14 right-4 inline-flex h-12 items-center rounded-full bg-accent px-4 text-sm font-bold text-white shadow-lg"
           >
-            管理毛孩
+            管理後台
           </Link>
         ) : null}
         <div className="mx-auto grid max-w-lg grid-cols-5">

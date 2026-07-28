@@ -67,6 +67,25 @@ export const adminPetListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
+export const adminPetPageQuerySchema = adminPetListQuerySchema.extend({
+  page: z.coerce.number().int().min(1).catch(1).default(1),
+  pageSize: z
+    .enum(["10", "25", "50", "100"])
+    .catch("10")
+    .default("10")
+    .transform((value) => Number(value)),
+});
+
+export const adminPetBulkActionSchema = z.object({
+  petIds: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(100)
+    .transform((petIds) => [...new Set(petIds)]),
+  action: z.enum(["publish", "hide"]),
+  reason: z.string().trim().max(2_000).optional(),
+});
+
 export const adminPetReviewSchema = z
   .object({
     action: z.enum(ADMIN_PET_REVIEW_ACTIONS),
@@ -120,3 +139,4 @@ export type PetCreateInput = z.infer<typeof petCreateSchema>;
 export type PetUpdateInput = z.infer<typeof petUpdateSchema>;
 export type AdminPetReviewInput = z.infer<typeof adminPetReviewSchema>;
 export type AdminPetPatchInput = z.infer<typeof adminPetPatchSchema>;
+export type AdminPetBulkActionInput = z.infer<typeof adminPetBulkActionSchema>;

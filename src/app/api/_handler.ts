@@ -9,11 +9,13 @@ import { verifyWebhookSignature } from "@/lib/commerce/webhook";
 import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
+import { runAdminPetBulkAction } from "@/lib/pets/admin-bulk";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
 import { getPublicPet, searchPublicPets } from "@/lib/pets/public-data";
 import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
 import {
+  adminPetBulkActionSchema,
   adminPetListQuerySchema,
   adminPetPatchSchema,
   adminPetReviewSchema,
@@ -516,6 +518,18 @@ export async function POST(request: Request) {
       .select()
       .single();
     return failed(error) ?? jsonOk(data, { status: 201 });
+  }
+  if (path === "/api/admin/pets/bulk-action") {
+    const actor = await requireActor(request);
+    if (!("actor" in actor)) return actor.response;
+    if (!canManagePet(actor.actor, {})) return jsonError("Pet management permission is required.", 403);
+    const body = await parseJson(request, adminPetBulkActionSchema);
+    if ("response" in body) return body.response;
+    try {
+      return jsonOk(await runAdminPetBulkAction(actor.supabase, body.data));
+    } catch {
+      return jsonError("Unable to load pets for bulk action.", 500);
+    }
   }
   if (path.startsWith("/api/admin/pets/") && path.endsWith("/review")) {
     const actor = await requireActor(request);

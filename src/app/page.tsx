@@ -22,7 +22,7 @@ export default async function LandingPage() {
           <header className="flex items-center justify-between">
             <Link href="/" className="latin-display text-3xl font-semibold">Pawtner</Link>
             <nav aria-label="主要導覽" className="flex items-center gap-2">
-              {showAdminPets ? <ButtonLink href="/admin/pets" variant="quiet">管理毛孩</ButtonLink> : null}
+              {showAdminPets ? <ButtonLink href="/admin" variant="quiet">管理後台</ButtonLink> : null}
               <ButtonLink href={session ? "/explore" : "/login"} variant="secondary">
                 {session ? "進入 Pawtner" : "登入"}
               </ButtonLink>

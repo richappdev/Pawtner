@@ -9,21 +9,26 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function FosterPetsPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from("pets").select("id,name,status,review_status,updated_at").order("updated_at", { ascending: false });
+  const { data } = await supabase
+    .from("pets")
+    .select("id,name,status,review_status,updated_at")
+    .eq("source_type", "private_foster")
+    .order("updated_at", { ascending: false });
+
   return (
     <PageShell
       eyebrow="PETS"
-      title="我的毛孩"
-      description="每一份生命紀錄都會清楚顯示完成度、送審狀態與下一步。"
+      title="我的動物"
+      description="建立、編輯並提交你照護中的待認養動物。"
       width="lg"
       role="foster"
-      headerAction={<ButtonLink href="/foster/pets/new">新增毛孩</ButtonLink>}
+      headerAction={<ButtonLink href="/foster/pets/new">新增動物</ButtonLink>}
     >
       {(data ?? []).length === 0 ? (
         <EmptyState
-          title="尚未建立毛孩資料"
-          description="先建立基本資料，再逐步補上照片、個性、健康與適合的家庭條件。草稿不會對外公開。"
-          action={{ href: "/foster/pets/new", label: "建立第一份資料" }}
+          title="尚未建立動物資料"
+          description="先建立第一筆資料，再提交給 Pawtner 團隊審核。"
+          action={{ href: "/foster/pets/new", label: "建立動物" }}
         />
       ) : (
         <div className="mt-8 space-y-4">
@@ -39,11 +44,14 @@ export default async function FosterPetsPage() {
                     <Badge variant={review.variant} icon={<span aria-hidden="true">{review.icon}</span>}>{review.label}</Badge>
                   </div>
                 </div>
-                {pet.review_status !== "pending_review" ? (
-                  <PetSubmitButton petId={pet.id} />
-                ) : (
-                  <span className="text-sm font-bold text-muted">等待合作團隊審核</span>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <ButtonLink href={`/foster/pets/${pet.id}/edit`} variant="secondary">編輯</ButtonLink>
+                  {pet.review_status !== "pending_review" ? (
+                    <PetSubmitButton petId={pet.id} />
+                  ) : (
+                    <span className="text-sm font-bold text-muted">審核中</span>
+                  )}
+                </div>
               </Card>
             );
           })}

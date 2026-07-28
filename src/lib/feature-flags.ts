@@ -5,6 +5,7 @@ const DEFAULT_FLAGS: Readonly<Record<string, boolean>> = {
   commerce: true,
   matching: true,
   firebase_auth: false,
+  government_pets: false,
 };
 
 function parseFlag(value: string | undefined): boolean | undefined {

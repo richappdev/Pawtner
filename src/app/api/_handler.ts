@@ -10,8 +10,7 @@ import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
-import { getPublicPet, listPublicPets } from "@/lib/pets/public-data";
-import { sanitizePetForPublic } from "@/lib/pets/public";
+import { getPublicPet, searchPublicPets } from "@/lib/pets/public-data";
 import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
 import {
@@ -32,11 +31,6 @@ const failed = (error: { message: string } | null) => (error ? jsonError(error.m
 
 type Db = SupabaseClient;
 
-interface FavoriteRow {
-  pets?: Record<string, unknown> | null;
-  [key: string]: unknown;
-}
-
 async function publicDb() {
   return serviceClient();
 }
@@ -46,7 +40,20 @@ export async function GET(request: Request) {
 
   if (path === "/api/pets") {
     try {
-      return jsonOk(await listPublicPets());
+      const params = new URL(request.url).searchParams;
+      const species = params.get("species");
+      const source = params.get("source");
+      if (species && !["dog", "cat", "other"].includes(species)) return jsonError("Invalid species.", 422);
+      if (source && !["private_foster", "government"].includes(source)) return jsonError("Invalid source.", 422);
+      return jsonOk(await searchPublicPets({
+        q: params.get("q") ?? undefined,
+        species: species as "dog" | "cat" | "other" | undefined,
+        region: params.get("region") ?? undefined,
+        source: source as "private_foster" | "government" | undefined,
+        availability: params.get("availability") === "open" ? "open" : undefined,
+        cursor: params.get("cursor") ?? undefined,
+        limit: Math.min(Number(params.get("limit") ?? 24) || 24, 48),
+      }));
     } catch {
       return jsonError("Unable to load public pets.", 500);
     }
@@ -98,17 +105,13 @@ export async function GET(request: Request) {
   if (path === "/api/favorites") {
     const { data, error } = await auth.supabase
       .from("favorites")
-      .select("*, pets:pets_public(*)")
+      .select("id,user_id,pet_id,created_at")
       .eq("user_id", auth.user.id);
-    return (
-      failed(error) ??
-      jsonOk(
-        ((data ?? []) as FavoriteRow[]).map((item) => ({
-          ...item,
-          pets: item.pets ? sanitizePetForPublic(item.pets) : item.pets,
-        })),
-      )
+    if (error) return jsonError(error.message, 500);
+    const favorites = await Promise.all(
+      (data ?? []).map(async (item) => ({ ...item, pets: await getPublicPet(item.pet_id) })),
     );
+    return jsonOk(favorites);
   }
   if (path === "/api/applications" || path.startsWith("/api/applications/")) {
     const id = path === "/api/applications" ? undefined : segmentId(request, "applications");
@@ -170,6 +173,21 @@ export async function GET(request: Request) {
     const { data, error } = await actor.supabase.from("feature_flags").select("*");
     return failed(error) ?? jsonOk(data ?? []);
   }
+  if (path === "/api/admin/pet-sources/moa/sync" && canAccessAdmin(actor.actor)) {
+    const [{ data: source, error: sourceError }, { data: runs, error: runsError }] = await Promise.all([
+      actor.supabase
+        .from("pet_sources")
+        .select("id,source_key,dataset_name,enabled,public_enabled,last_successful_sync_at,last_successful_record_count")
+        .eq("source_key", "moa-animal-adoption")
+        .maybeSingle(),
+      actor.supabase
+        .from("pet_sync_runs")
+        .select("*")
+        .order("started_at", { ascending: false })
+        .limit(10),
+    ]);
+    return failed(sourceError ?? runsError) ?? jsonOk({ source, runs: runs ?? [] });
+  }
   if (path === "/api/admin/pets" || path.startsWith("/api/admin/pets/")) {
     if (!canAccessAdmin(actor.actor)) return jsonError("Administrator access is required.", 403);
     if (path === "/api/admin/pets") {
@@ -180,6 +198,7 @@ export async function GET(request: Request) {
       const { data, error } = await listAdminPets(actor.supabase, {
         status: parsed.data.status,
         species: parsed.data.species,
+        source: parsed.data.source,
         isPublished: parsed.data.isPublished,
         q: parsed.data.q,
       });
@@ -294,6 +313,7 @@ export async function POST(request: Request) {
       .from("pets")
       .insert({
         foster_profile_id: profile.id,
+        source_type: "private_foster",
         name: body.data.name,
         species: body.data.species,
         breed: body.data.breed,
@@ -302,10 +322,14 @@ export async function POST(request: Request) {
         weight_kg: body.data.weightKg,
         color: body.data.color,
         region: body.data.region,
+        age_band: body.data.ageBand,
+        body_size: body.data.bodySize,
+        found_location: body.data.foundLocation,
         status: body.data.status,
         sterilized: body.data.sterilized,
         microchipped: body.data.microchipped,
         vaccinated: body.data.vaccinated,
+        rabies_vaccinated: body.data.rabiesVaccinated,
         dewormed: body.data.dewormed,
         personality_summary: body.data.personalitySummary,
         special_care: body.data.specialCare,
@@ -363,6 +387,19 @@ export async function POST(request: Request) {
       z.object({ petId: uuid, answers: record.optional(), questionnaireId: uuid.optional() }),
     );
     if ("response" in body) return body.response;
+    const { data: targetPet, error: targetPetError } = await auth.supabase
+      .from("pets")
+      .select("id,source_type,status,is_published,review_status")
+      .eq("id", body.data.petId)
+      .maybeSingle();
+    if (targetPetError) return jsonError(targetPetError.message, 500);
+    if (!targetPet) return jsonError("Pet not found.", 404);
+    if (targetPet.source_type !== "private_foster") {
+      return jsonError("Government pets must be adopted through the official shelter.", 409);
+    }
+    if (!targetPet.is_published || targetPet.review_status !== "approved" || targetPet.status !== "available") {
+      return jsonError("This pet is not accepting applications.", 409);
+    }
     const { data, error } = await auth.supabase
       .from("adoption_applications")
       .insert({ pet_id: body.data.petId, adopter_user_id: auth.user.id, status: "submitted" })
@@ -483,6 +520,14 @@ export async function POST(request: Request) {
     if (!canManagePet(actor.actor, {})) return jsonError("Pet management permission is required.", 403);
     const id = segmentId(request, "pets");
     if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
+    const { data: reviewTarget } = await actor.supabase
+      .from("pets")
+      .select("source_type")
+      .eq("id", id)
+      .maybeSingle();
+    if (reviewTarget?.source_type !== "private_foster") {
+      return jsonError("Government listings do not use the foster review workflow.", 409);
+    }
     const body = await parseJson(request, adminPetReviewSchema);
     if ("response" in body) return body.response;
     const { data, error } = await actor.supabase.rpc("review_pet", {
@@ -492,6 +537,27 @@ export async function POST(request: Request) {
     });
     if (error) return jsonError("Unable to complete pet review.", 409);
     return jsonOk(data);
+  }
+  if (path === "/api/admin/pet-sources/moa/sync") {
+    const actor = await requireActor(request);
+    if (!("actor" in actor)) return actor.response;
+    if (!canAccessAdmin(actor.actor)) return jsonError("Administrator access is required.", 403);
+    const body = await parseJson(request, z.object({ dryRun: z.boolean().default(false) }));
+    if ("response" in body) return body.response;
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const syncSecret = process.env.MOA_SYNC_SECRET;
+    if (!baseUrl || !syncSecret) return jsonError("MOA sync is not configured.", 503);
+    const response = await fetch(`${baseUrl}/functions/v1/sync-moa-pets`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-sync-secret": syncSecret },
+      body: JSON.stringify({ dryRun: body.data.dryRun, trigger: "admin" }),
+      cache: "no-store",
+    }).catch(() => null);
+    if (!response) return jsonError("Unable to reach the MOA sync function.", 502);
+    const payload = await response.json().catch(() => ({}));
+    return response.ok
+      ? jsonOk(payload, { status: 202 })
+      : jsonError("MOA sync failed.", response.status >= 500 ? 502 : response.status, payload);
   }
   return jsonError("Not found.", 404);
 }
@@ -532,15 +598,25 @@ export async function PATCH(request: Request) {
     if (body.data.weightKg !== undefined) patch.weight_kg = body.data.weightKg;
     if (body.data.color !== undefined) patch.color = body.data.color;
     if (body.data.region !== undefined) patch.region = body.data.region;
+    if (body.data.ageBand !== undefined) patch.age_band = body.data.ageBand;
+    if (body.data.bodySize !== undefined) patch.body_size = body.data.bodySize;
+    if (body.data.foundLocation !== undefined) patch.found_location = body.data.foundLocation;
     if (body.data.status !== undefined) patch.status = body.data.status;
     if (body.data.sterilized !== undefined) patch.sterilized = body.data.sterilized;
     if (body.data.microchipped !== undefined) patch.microchipped = body.data.microchipped;
     if (body.data.vaccinated !== undefined) patch.vaccinated = body.data.vaccinated;
+    if (body.data.rabiesVaccinated !== undefined) patch.rabies_vaccinated = body.data.rabiesVaccinated;
     if (body.data.dewormed !== undefined) patch.dewormed = body.data.dewormed;
     if (body.data.personalitySummary !== undefined) patch.personality_summary = body.data.personalitySummary;
     if (body.data.specialCare !== undefined) patch.special_care = body.data.specialCare;
     if (body.data.adoptionConditions !== undefined) patch.adoption_conditions = body.data.adoptionConditions;
-    const { data, error } = await actor.supabase.from("pets").update(patch).eq("id", id).select().single();
+    const { data, error } = await actor.supabase
+      .from("pets")
+      .update(patch)
+      .eq("id", id)
+      .eq("source_type", "private_foster")
+      .select()
+      .single();
     return failed(error) ?? jsonOk(data);
   }
   if (path.startsWith("/api/admin/pets/")) {
@@ -551,11 +627,37 @@ export async function PATCH(request: Request) {
     if ("response" in body) return body.response;
     const existing = await actor.supabase
       .from("pets")
-      .select("id,status,is_published,published_at")
+      .select("id,status,is_published,published_at,source_type")
       .eq("id", id)
       .maybeSingle();
     if (existing.error) return jsonError(existing.error.message, 500);
     if (!existing.data) return jsonError("Pet not found.", 404);
+    if (existing.data.source_type === "government") {
+      if (body.data.status !== undefined && !["available", "hidden"].includes(body.data.status)) {
+        return jsonError("Government source status is read-only; staff may only hide or show the listing.", 409);
+      }
+      const hidden = body.data.isPublished === false || body.data.status === "hidden"
+        ? true
+        : body.data.isPublished === true || body.data.status === "available"
+          ? false
+          : undefined;
+      const overlay = {
+        pet_id: id,
+        display_name: body.data.displayName,
+        personality_summary: body.data.personalitySummary,
+        special_care: body.data.specialCare,
+        adoption_conditions: body.data.adoptionConditions,
+        tags: body.data.tags,
+        ...(hidden === undefined ? {} : { is_hidden: hidden }),
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await actor.supabase
+        .from("pet_editorial_overrides")
+        .upsert(overlay, { onConflict: "pet_id" })
+        .select()
+        .single();
+      return failed(error) ?? jsonOk(data);
+    }
     const patch: Record<string, unknown> = {};
     if (body.data.status !== undefined) patch.status = body.data.status;
     if (body.data.isPublished !== undefined) {

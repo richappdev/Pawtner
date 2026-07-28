@@ -1,38 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { getFlag } from "@/lib/feature-flags";
 import type {
   PetMediaView,
   PublicHealthRecord,
   PublicPetDetail,
+  PublicPetPage,
+  PublicPetSearch,
   PublicPetSummary,
 } from "@/lib/pets/public-types";
 import type { PetSpecies, PetStatus } from "@/lib/schemas/pet";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const PUBLIC_STATUSES: PetStatus[] = [
-  "available",
-  "application_pending",
-  "reserved",
-  "trial_adoption",
-];
 const MEDIA_BUCKET = "pet-media";
 
 type RawMedia = {
   id: string;
-  storage_path: string;
+  pet_id: string;
+  storage_path: string | null;
+  external_url: string | null;
   media_type: "image" | "video";
   is_cover: boolean;
   is_ai_edited: boolean;
   is_public: boolean;
   sort_order: number;
-};
-
-type RawHealth = {
-  id: string;
-  record_date: string;
-  title: string;
-  details: string | null;
-  is_critical: boolean;
 };
 
 type RawPublicPet = {
@@ -42,123 +33,129 @@ type RawPublicPet = {
   breed: string | null;
   sex: "male" | "female" | "unknown" | null;
   age_months: number | null;
+  age_band: "child" | "adult" | "senior" | "unknown" | null;
+  body_size: "small" | "medium" | "large" | "unknown" | null;
   weight_kg: number | string | null;
   color: string | null;
   region: string | null;
+  found_location: string | null;
   status: PetStatus;
+  source_type: "private_foster" | "government";
   sterilized: boolean | null;
   microchipped: boolean | null;
   vaccinated: boolean | null;
+  rabies_vaccinated: boolean | null;
   dewormed: boolean | null;
   personality_summary: string | null;
   special_care: string | null;
   adoption_conditions: string | null;
+  tags: string[] | null;
   published_at: string | null;
-  foster_profiles:
-    | {
-        display_name: string;
-        organizations:
-          | { name: string; slug: string | null; is_verified: boolean }
-          | Array<{ name: string; slug: string | null; is_verified: boolean }>
-          | null;
-      }
-    | Array<{
-        display_name: string;
-        organizations:
-          | { name: string; slug: string | null; is_verified: boolean }
-          | Array<{ name: string; slug: string | null; is_verified: boolean }>
-          | null;
-      }>
-    | null;
-  pet_traits: { tags: string[] | null } | Array<{ tags: string[] | null }> | null;
-  pet_media: RawMedia[] | null;
-  pet_health_records: RawHealth[] | null;
+  foster_display_name: string | null;
+  organization_name: string | null;
+  organization_slug: string | null;
+  organization_verified: boolean | null;
+  source_label: string | null;
+  source_attribution: string | null;
+  dataset_url: string | null;
+  license_name: string | null;
+  license_url: string | null;
+  official_reference: string | null;
+  shelter_name: string | null;
+  shelter_address: string | null;
+  shelter_phone: string | null;
+  official_url: string | null;
+  adoption_open_at: string | null;
+  last_seen_at: string | null;
 };
 
-const PUBLIC_SELECT = `
-  id,name,species,breed,sex,age_months,weight_kg,color,region,status,
-  sterilized,microchipped,vaccinated,dewormed,personality_summary,special_care,
-  adoption_conditions,published_at,
-  foster_profiles(display_name,organizations(name,slug,is_verified)),
-  pet_traits(tags),
-  pet_media(id,storage_path,media_type,is_cover,is_ai_edited,is_public,sort_order),
-  pet_health_records(id,record_date,title,details,is_critical)
-`;
+const PUBLIC_SELECT = [
+  "id", "name", "species", "breed", "sex", "age_months", "age_band", "body_size",
+  "weight_kg", "color", "region", "found_location", "status", "source_type",
+  "sterilized", "microchipped", "vaccinated", "rabies_vaccinated", "dewormed",
+  "personality_summary", "special_care", "adoption_conditions", "tags", "published_at",
+  "foster_display_name", "organization_name", "organization_slug", "organization_verified",
+  "source_label", "source_attribution", "dataset_url", "license_name", "license_url",
+  "official_reference", "shelter_name", "shelter_address", "shelter_phone",
+  "official_url", "adoption_open_at", "last_seen_at",
+].join(",");
 
-function first<T>(value: T | T[] | null | undefined): T | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
+function freshness(lastSeenAt: string | null): string | null {
+  if (!lastSeenAt) return null;
+  const days = Math.max(0, Math.floor((Date.now() - new Date(lastSeenAt).valueOf()) / 86_400_000));
+  if (days === 0) return "今天更新";
+  if (days === 1) return "昨天更新";
+  return `${days} 天前更新`;
 }
 
-async function resolveMedia(
+async function mediaByPet(
   supabase: SupabaseClient,
-  petName: string,
-  media: RawMedia[],
-): Promise<PetMediaView[]> {
-  const publicMedia = media
-    .filter((item) => item.is_public)
-    .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order);
-  if (!publicMedia.length) return [];
+  pets: Array<{ id: string; name: string }>,
+): Promise<Map<string, PetMediaView[]>> {
+  const result = new Map<string, PetMediaView[]>();
+  if (!pets.length) return result;
+  const names = new Map(pets.map((pet) => [pet.id, pet.name]));
+  const { data } = await supabase
+    .from("pet_media")
+    .select("id,pet_id,storage_path,external_url,media_type,is_cover,is_ai_edited,is_public,sort_order")
+    .in("pet_id", pets.map((pet) => pet.id))
+    .eq("is_public", true)
+    .order("is_cover", { ascending: false })
+    .order("sort_order", { ascending: true });
+  const rows = (data ?? []) as RawMedia[];
+  const stored = rows.filter((row) => row.storage_path);
+  const signed = stored.length
+    ? await supabase.storage.from(MEDIA_BUCKET).createSignedUrls(
+        stored.map((row) => row.storage_path!),
+        60 * 60,
+      )
+    : { data: [] };
+  const signedUrls = new Map(
+    stored.map((row, index) => [row.id, signed.data?.[index]?.signedUrl ?? null]),
+  );
 
-  const { data, error } = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .createSignedUrls(publicMedia.map((item) => item.storage_path), 60 * 60);
-  if (error || !data) return [];
-
-  return publicMedia.flatMap((item, index) => {
-    const url = data[index]?.signedUrl;
-    if (!url) return [];
-    return [{
-      id: item.id,
+  for (const row of rows) {
+    const url = row.external_url ?? signedUrls.get(row.id);
+    if (!url) continue;
+    const current = result.get(row.pet_id) ?? [];
+    current.push({
+      id: row.id,
       url,
-      mediaType: item.media_type,
-      isCover: item.is_cover,
-      isAiEdited: item.is_ai_edited,
-      sortOrder: item.sort_order,
-      alt: `${petName}的${item.is_cover ? "主要照片" : "生活照片"}`,
-    }];
-  });
+      mediaType: row.media_type,
+      isCover: row.is_cover,
+      isAiEdited: row.is_ai_edited,
+      sortOrder: row.sort_order,
+      alt: `${names.get(row.pet_id) ?? "待認養動物"}${row.is_cover ? "封面照片" : "照片"}`,
+    });
+    result.set(row.pet_id, current);
+  }
+  return result;
 }
 
-function completeness(pet: RawPublicPet, mediaCount: number, tags: string[]): number {
+function completeness(pet: RawPublicPet, mediaCount: number): number {
   const values = [
-    pet.breed,
-    pet.sex,
-    pet.age_months,
-    pet.region,
-    pet.personality_summary,
-    pet.adoption_conditions,
-    pet.sterilized,
-    pet.vaccinated,
-    mediaCount > 0,
-    tags.length > 0,
+    pet.breed, pet.sex, pet.age_months ?? pet.age_band, pet.region,
+    pet.personality_summary, pet.adoption_conditions, pet.sterilized,
+    pet.rabies_vaccinated ?? pet.vaccinated, mediaCount > 0, Boolean(pet.tags?.length),
   ];
   return Math.round((values.filter((value) => value !== null && value !== false && value !== "").length / values.length) * 100);
 }
 
-async function toDetail(supabase: SupabaseClient, pet: RawPublicPet): Promise<PublicPetDetail> {
-  const foster = first(pet.foster_profiles);
-  const organization = first(foster?.organizations);
-  const traits = first(pet.pet_traits);
-  const tags = traits?.tags?.filter(Boolean) ?? [];
-  const media = await resolveMedia(supabase, pet.name, pet.pet_media ?? []);
-  const healthRecords: PublicHealthRecord[] = (pet.pet_health_records ?? [])
-    .sort((a, b) => b.record_date.localeCompare(a.record_date))
-    .map((record) => ({
-      id: record.id,
-      recordDate: record.record_date,
-      title: record.title,
-      details: record.details,
-      isCritical: record.is_critical,
-    }));
-  const missingInformation = [
-    !pet.age_months && "年齡",
-    !pet.weight_kg && "體重",
-    !pet.personality_summary && "個性觀察",
-    !pet.adoption_conditions && "適合家庭",
-    !media.length && "生活照片",
-  ].filter((value): value is string => Boolean(value));
-
+function toSummary(pet: RawPublicPet, media: PetMediaView[]): PublicPetSummary {
+  const government = pet.source_type === "government";
+  const source = government && pet.source_label && pet.source_attribution && pet.dataset_url
+    && pet.license_name && pet.license_url && pet.last_seen_at
+    ? {
+        label: pet.source_label,
+        attribution: pet.source_attribution,
+        datasetUrl: pet.dataset_url,
+        licenseName: pet.license_name,
+        licenseUrl: pet.license_url,
+        officialReference: pet.official_reference,
+        lastSeenAt: pet.last_seen_at,
+      }
+    : null;
+  const officialUrl = pet.official_url ?? pet.dataset_url ?? "https://data.gov.tw/dataset/85903";
   return {
     id: pet.id,
     name: pet.name,
@@ -166,77 +163,115 @@ async function toDetail(supabase: SupabaseClient, pet: RawPublicPet): Promise<Pu
     breed: pet.breed,
     sex: pet.sex,
     ageMonths: pet.age_months,
-    weightKg: pet.weight_kg === null ? null : Number(pet.weight_kg),
-    color: pet.color,
+    ageBand: pet.age_band,
+    bodySize: pet.body_size,
     region: pet.region,
     status: pet.status,
-    sterilized: pet.sterilized,
-    microchipped: pet.microchipped,
-    vaccinated: pet.vaccinated,
-    dewormed: pet.dewormed,
+    sourceType: pet.source_type,
+    source,
+    freshnessText: government ? freshness(pet.last_seen_at) : null,
+    shelter: government
+      ? { name: pet.shelter_name, phone: pet.shelter_phone, address: pet.shelter_address }
+      : null,
+    adoptionAction: government
+      ? {
+          kind: "shelter_contact",
+          phone: pet.shelter_phone,
+          address: pet.shelter_address,
+          officialUrl,
+          adoptionOpenAt: pet.adoption_open_at,
+        }
+      : { kind: "pawtner_application" },
     personalitySummary: pet.personality_summary,
-    specialCare: pet.special_care,
-    adoptionConditions: pet.adoption_conditions,
-    temperamentTags: tags,
-    fosterDisplayName: foster?.display_name ?? "合作中途",
-    organization: organization
-      ? { name: organization.name, slug: organization.slug, isVerified: organization.is_verified }
+    temperamentTags: pet.tags?.filter(Boolean) ?? [],
+    fosterDisplayName: government ? (pet.shelter_name ?? pet.source_label ?? "政府收容所") : (pet.foster_display_name ?? "合作中途"),
+    organization: pet.organization_name
+      ? {
+          name: pet.organization_name,
+          slug: pet.organization_slug,
+          isVerified: pet.organization_verified ?? false,
+        }
       : null,
     coverMedia: media.find((item) => item.isCover) ?? media[0] ?? null,
-    media,
-    healthRecords,
-    profileCompleteness: completeness(pet, media.length, tags),
+    profileCompleteness: completeness(pet, media.length),
     publishedAt: pet.published_at,
-    missingInformation,
+  };
+}
+
+export async function searchPublicPets(filters: PublicPetSearch = {}): Promise<PublicPetPage> {
+  const supabase = createServiceClient();
+  const limit = Math.min(Math.max(filters.limit ?? 24, 1), 48);
+  let query = supabase
+    .from("pets_public")
+    .select(PUBLIC_SELECT)
+    .order("id", { ascending: false })
+    .limit(limit + 1);
+  if (!getFlag("government_pets")) query = query.eq("source_type", "private_foster");
+  if (filters.source) query = query.eq("source_type", filters.source);
+  if (filters.species) query = query.eq("species", filters.species);
+  if (filters.region?.trim()) query = query.ilike("region", `%${filters.region.trim()}%`);
+  if (filters.cursor) query = query.lt("id", filters.cursor);
+  if (filters.q?.trim()) {
+    const q = filters.q.trim().replaceAll(",", " ");
+    query = query.or(`name.ilike.%${q}%,breed.ilike.%${q}%,region.ilike.%${q}%,foster_display_name.ilike.%${q}%,shelter_name.ilike.%${q}%`);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as RawPublicPet[];
+  const visible = rows.slice(0, limit);
+  const media = await mediaByPet(supabase, visible);
+  return {
+    items: visible.map((pet) => toSummary(pet, media.get(pet.id) ?? [])),
+    nextCursor: rows.length > limit ? visible.at(-1)?.id ?? null : null,
   };
 }
 
 export async function listPublicPets(limit = 48): Promise<PublicPetSummary[]> {
-  const supabase = createServiceClient();
-  const { data, error } = await supabase
-    .from("pets")
-    .select(PUBLIC_SELECT)
-    .eq("review_status", "approved")
-    .eq("is_published", true)
-    .in("status", PUBLIC_STATUSES)
-    .order("published_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-
-  return Promise.all(
-    ((data ?? []) as unknown as RawPublicPet[]).map(async (pet) => {
-      const detail = await toDetail(supabase, pet);
-      return {
-        id: detail.id,
-        name: detail.name,
-        species: detail.species,
-        breed: detail.breed,
-        sex: detail.sex,
-        ageMonths: detail.ageMonths,
-        region: detail.region,
-        status: detail.status,
-        personalitySummary: detail.personalitySummary,
-        temperamentTags: detail.temperamentTags,
-        fosterDisplayName: detail.fosterDisplayName,
-        organization: detail.organization,
-        coverMedia: detail.coverMedia,
-        profileCompleteness: detail.profileCompleteness,
-        publishedAt: detail.publishedAt,
-      };
-    }),
-  );
+  return (await searchPublicPets({ limit })).items;
 }
 
 export async function getPublicPet(id: string): Promise<PublicPetDetail | null> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase
-    .from("pets")
-    .select(PUBLIC_SELECT)
-    .eq("id", id)
-    .eq("review_status", "approved")
-    .eq("is_published", true)
-    .in("status", PUBLIC_STATUSES)
-    .maybeSingle();
+  let query = supabase.from("pets_public").select(PUBLIC_SELECT).eq("id", id);
+  if (!getFlag("government_pets")) query = query.eq("source_type", "private_foster");
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
-  return data ? toDetail(supabase, data as unknown as RawPublicPet) : null;
+  if (!data) return null;
+  const pet = data as unknown as RawPublicPet;
+  const media = (await mediaByPet(supabase, [pet])).get(pet.id) ?? [];
+  const { data: health } = pet.source_type === "private_foster"
+    ? await supabase
+        .from("pet_health_records")
+        .select("id,record_date,title,details,is_critical")
+        .eq("pet_id", id)
+        .order("record_date", { ascending: false })
+    : { data: [] };
+  const healthRecords: PublicHealthRecord[] = (health ?? []).map((record) => ({
+    id: record.id,
+    recordDate: record.record_date,
+    title: record.title,
+    details: record.details,
+    isCritical: record.is_critical,
+  }));
+  const summary = toSummary(pet, media);
+  return {
+    ...summary,
+    weightKg: pet.weight_kg === null ? null : Number(pet.weight_kg),
+    color: pet.color,
+    foundLocation: pet.found_location,
+    sterilized: pet.sterilized,
+    microchipped: pet.microchipped,
+    vaccinated: pet.vaccinated,
+    rabiesVaccinated: pet.rabies_vaccinated,
+    dewormed: pet.dewormed,
+    specialCare: pet.special_care,
+    adoptionConditions: pet.adoption_conditions,
+    media,
+    healthRecords,
+    missingInformation: [
+      !pet.age_months && !pet.age_band && "年齡",
+      !pet.personality_summary && "個性描述",
+      !media.length && "照片",
+    ].filter((value): value is string => Boolean(value)),
+  };
 }

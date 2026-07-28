@@ -15,6 +15,9 @@ export const petStatusSchema = z.enum([
 ]);
 
 export const petSpeciesSchema = z.enum(["dog", "cat", "other"]);
+export const petSourceTypeSchema = z.enum(["private_foster", "government"]);
+export const petAgeBandSchema = z.enum(["child", "adult", "senior", "unknown"]);
+export const petBodySizeSchema = z.enum(["small", "medium", "large", "unknown"]);
 
 export const petCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -25,10 +28,14 @@ export const petCreateSchema = z.object({
   weightKg: z.number().positive().max(200).optional(),
   color: z.string().trim().max(80).optional(),
   region: z.string().trim().max(80).optional(),
+  ageBand: petAgeBandSchema.optional(),
+  bodySize: petBodySizeSchema.optional(),
+  foundLocation: z.string().trim().max(500).optional(),
   status: petStatusSchema.default("intake"),
   sterilized: z.boolean().optional(),
   microchipped: z.boolean().optional(),
   vaccinated: z.boolean().optional(),
+  rabiesVaccinated: z.boolean().optional(),
   dewormed: z.boolean().optional(),
   personalitySummary: z.string().trim().max(5_000).optional(),
   specialCare: z.string().trim().max(5_000).optional(),
@@ -42,6 +49,7 @@ export const petUpdateSchema = petCreateSchema
 export const adminPetListQuerySchema = z.object({
   status: petStatusSchema.optional(),
   species: petSpeciesSchema.optional(),
+  source: petSourceTypeSchema.optional(),
   isPublished: z
     .enum(["true", "false"])
     .optional()
@@ -68,13 +76,19 @@ export const adminPetPatchSchema = z
   .object({
     status: petStatusSchema.optional(),
     isPublished: z.boolean().optional(),
+    displayName: z.string().trim().min(1).max(100).nullable().optional(),
+    personalitySummary: z.string().trim().max(5_000).nullable().optional(),
+    specialCare: z.string().trim().max(5_000).nullable().optional(),
+    adoptionConditions: z.string().trim().max(5_000).nullable().optional(),
+    tags: z.array(z.string().trim().min(1).max(60)).max(30).nullable().optional(),
   })
-  .refine((data) => data.status !== undefined || data.isPublished !== undefined, {
-    message: "At least one of status or isPublished is required.",
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: "At least one field is required.",
   });
 
 export type PetStatus = z.infer<typeof petStatusSchema>;
 export type PetSpecies = z.infer<typeof petSpeciesSchema>;
+export type PetSourceType = z.infer<typeof petSourceTypeSchema>;
 export type PetCreateInput = z.infer<typeof petCreateSchema>;
 export type PetUpdateInput = z.infer<typeof petUpdateSchema>;
 export type AdminPetReviewInput = z.infer<typeof adminPetReviewSchema>;

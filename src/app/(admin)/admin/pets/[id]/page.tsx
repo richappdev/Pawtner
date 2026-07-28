@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminPetActions } from "@/components/admin/admin-pet-actions";
+import { GovernmentPetEnrichmentForm } from "@/components/admin/government-pet-enrichment-form";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getAdminPet } from "@/lib/pets/admin-query";
@@ -12,6 +13,7 @@ interface AdminPetDetail {
   id: string;
   name: string;
   species: string;
+  source_type: "private_foster" | "government";
   breed: string | null;
   sex: string | null;
   age_months: number | null;
@@ -23,6 +25,10 @@ interface AdminPetDetail {
   microchipped: boolean | null;
   vaccinated: boolean | null;
   dewormed: boolean | null;
+  rabies_vaccinated: boolean | null;
+  age_band: string | null;
+  body_size: string | null;
+  found_location: string | null;
   personality_summary: string | null;
   special_care: string | null;
   adoption_conditions: string | null;
@@ -52,12 +58,31 @@ interface AdminPetDetail {
   }> | null;
   pet_media?: Array<{
     id: string;
-    storage_path: string;
+    storage_path: string | null;
+    external_url: string | null;
     media_type: string;
     is_cover: boolean;
     is_ai_edited: boolean;
     is_public: boolean;
     sort_order: number;
+  }> | null;
+  pet_source_records?: Array<{
+    external_sub_id: string | null;
+    shelter_name: string | null;
+    shelter_address: string | null;
+    shelter_phone: string | null;
+    official_url: string | null;
+    adoption_open_at: string | null;
+    last_seen_at: string;
+    availability: string;
+    pet_sources?: { dataset_name: string; attribution: string; dataset_url: string; license_name: string; license_url: string } | null;
+  }> | null;
+  pet_editorial_overrides?: Array<{
+    display_name: string | null;
+    personality_summary: string | null;
+    special_care: string | null;
+    adoption_conditions: string | null;
+    tags: string[] | null;
   }> | null;
 }
 
@@ -106,6 +131,8 @@ export default async function AdminPetDetailPage({
   const traits = pet.pet_traits?.[0];
   const health = pet.pet_health_records ?? [];
   const media = [...(pet.pet_media ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const source = pet.pet_source_records?.[0];
+  const enrichment = pet.pet_editorial_overrides?.[0];
 
   return (
     <main className="w-full space-y-8 p-6 md:p-10">
@@ -117,6 +144,9 @@ export default async function AdminPetDetailPage({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="display text-4xl">{pet.name}</h1>
           <Badge>{pet.status}</Badge>
+          <Badge variant={pet.source_type === "government" ? "pending" : "neutral"}>
+            {pet.source_type === "government" ? "government" : "private foster"}
+          </Badge>
           <Badge variant={pet.is_published ? "success" : "pending"}>
             {pet.is_published ? "published" : "draft"}
           </Badge>
@@ -132,10 +162,33 @@ export default async function AdminPetDetailPage({
         <div className="mt-4">
           <AdminPetActions
             petId={pet.id}
-            actions={["approve", "request_changes", "hide", "unpublish", "archive"]}
+            sourceType={pet.source_type}
+            actions={pet.source_type === "government"
+              ? ["hide", "unpublish"]
+              : ["approve", "request_changes", "hide", "unpublish", "archive"]}
           />
         </div>
       </Card>
+
+      {pet.source_type === "government" && source ? (
+        <>
+          <Card className="max-w-3xl">
+            <p className="eyebrow">SOURCE-CONTROLLED · READ ONLY</p>
+            <h2 className="display mt-2 text-2xl">政府來源資料</h2>
+            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Field label="官方編號" value={source.external_sub_id} />
+              <Field label="資料狀態" value={source.availability} />
+              <Field label="收容所" value={source.shelter_name} />
+              <Field label="電話" value={source.shelter_phone} />
+              <Field label="地址" value={source.shelter_address} />
+              <Field label="認養開放日" value={source.adoption_open_at} />
+              <Field label="最後出現" value={new Date(source.last_seen_at).toLocaleString("zh-TW")} />
+              <Field label="授權" value={source.pet_sources?.license_name} />
+            </dl>
+          </Card>
+          <GovernmentPetEnrichmentForm petId={pet.id} initial={enrichment} />
+        </>
+      ) : null}
 
       <Card className="max-w-3xl">
         <p className="font-semibold">基本資料</p>
@@ -209,7 +262,7 @@ export default async function AdminPetDetailPage({
                 {item.is_cover ? <Badge>cover</Badge> : null}
                 {item.is_ai_edited ? <Badge>AI</Badge> : null}
                 {item.is_public ? <Badge variant="success">公開</Badge> : <Badge variant="pending">私人</Badge>}
-                <span className="break-all text-muted">{item.storage_path}</span>
+                <span className="break-all text-muted">{item.external_url ?? item.storage_path}</span>
               </li>
             ))}
           </ul>

@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: supabaseHostname,
         pathname: "/storage/v1/object/sign/pet-media/**",
       },
+      {
+        protocol: "https",
+        hostname: "www.pet.gov.tw",
+        pathname: "/upload/pic/**",
+      },
     ],
   },
 };

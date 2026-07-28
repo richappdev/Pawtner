@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 
 import type { PetMediaView } from "@/lib/pets/public-types";
 
@@ -36,7 +39,10 @@ export function PetCover({
   className?: string;
   priority?: boolean;
 }) {
-  if (!media || media.mediaType !== "image") {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const failed = Boolean(media?.url && failedUrl === media.url);
+
+  if (!media || media.mediaType !== "image" || failed) {
     return <PetMediaPlaceholder name={name} className={className} />;
   }
 
@@ -49,6 +55,7 @@ export function PetCover({
         priority={priority}
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         className="object-cover"
+        onError={() => setFailedUrl(media.url)}
       />
       {media.isAiEdited ? (
         <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-bold text-muted">

@@ -1,38 +1,51 @@
+import Link from "next/link";
+
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { PetCard } from "@/components/pet-card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
-import { listPublicPets } from "@/lib/pets/public-data";
+import { searchPublicPets } from "@/lib/pets/public-data";
 import { SPECIES_LABELS } from "@/lib/pets/presentation";
+import type { PetSourceType } from "@/lib/pets/public-types";
+import type { PetSpecies } from "@/lib/schemas/pet";
 
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; species?: string; region?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    species?: string;
+    region?: string;
+    source?: string;
+    cursor?: string;
+  }>;
 }) {
   const filters = await searchParams;
-  const pets = await listPublicPets().catch(() => []);
-  const query = filters.q?.trim().toLocaleLowerCase("zh-TW") ?? "";
-  const filtered = pets.filter((pet) => {
-    const matchesQuery = !query || [pet.name, pet.breed, pet.region, pet.fosterDisplayName]
-      .filter(Boolean)
-      .some((value) => value!.toLocaleLowerCase("zh-TW").includes(query));
-    const matchesSpecies = !filters.species || pet.species === filters.species;
-    const matchesRegion = !filters.region || pet.region?.includes(filters.region);
-    return matchesQuery && matchesSpecies && matchesRegion;
-  });
+  const page = await searchPublicPets({
+    q: filters.q,
+    species: filters.species as PetSpecies | undefined,
+    region: filters.region,
+    source: filters.source as PetSourceType | undefined,
+    availability: "open",
+    cursor: filters.cursor,
+    limit: 24,
+  }).catch(() => ({ items: [], nextCursor: null }));
+  const nextParams = new URLSearchParams(
+    Object.entries(filters).filter(([key, value]) => key !== "cursor" && Boolean(value)) as string[][],
+  );
+  if (page.nextCursor) nextParams.set("cursor", page.nextCursor);
 
   return (
     <PageShell
       eyebrow="EXPLORE"
       title="遇見正在等家的牠"
-      description="先從真實生活、照護需求與資料來源認識彼此，不急著做決定。"
+      description="搜尋 Pawtner 中途照護與政府收容所的待認養動物。政府資料會直接引導你聯絡官方收容所。"
       width="xl"
     >
-      <form className="mt-8 grid gap-3 rounded-[20px] border bg-surface p-4 shadow-[var(--shadow-soft)] md:grid-cols-[1.6fr_.7fr_.7fr_auto]">
+      <form className="mt-8 grid gap-3 rounded-[20px] border bg-surface p-4 shadow-[var(--shadow-soft)] md:grid-cols-[1.5fr_.7fr_.7fr_.8fr_auto]">
         <label>
           <span className="field-label mb-2">搜尋</span>
-          <Input name="q" defaultValue={filters.q ?? ""} placeholder="名字、品種、地區或中途" />
+          <Input name="q" defaultValue={filters.q ?? ""} placeholder="名字、品種、地區或收容所" />
         </label>
         <label>
           <span className="field-label mb-2">物種</span>
@@ -45,27 +58,49 @@ export default async function ExplorePage({
         </label>
         <label>
           <span className="field-label mb-2">地區</span>
-          <Input name="region" defaultValue={filters.region ?? ""} placeholder="縣市" />
+          <Input name="region" defaultValue={filters.region ?? ""} placeholder="例如：臺北市" />
+        </label>
+        <label>
+          <span className="field-label mb-2">資料來源</span>
+          <Select name="source" defaultValue={filters.source ?? ""}>
+            <option value="">全部</option>
+            <option value="private_foster">Pawtner 中途</option>
+            <option value="government">政府開放資料</option>
+          </Select>
         </label>
         <Button type="submit" className="self-end">套用篩選</Button>
       </form>
 
       <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-        <p className="font-bold"><span className="text-accent">{filtered.length}</span> 位毛孩</p>
-        {filters.q || filters.species || filters.region ? (
-          <a href="/explore" className="text-sm font-bold text-accent underline underline-offset-4">清除篩選</a>
+        <p className="font-bold">本頁 <span className="text-accent">{page.items.length}</span> 筆</p>
+        {filters.q || filters.species || filters.region || filters.source || filters.cursor ? (
+          <Link href="/explore" className="text-sm font-bold text-accent underline underline-offset-4">
+            清除篩選
+          </Link>
         ) : null}
       </div>
 
-      {filtered.length ? (
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((pet) => <PetCard key={pet.id} pet={pet} />)}
-        </div>
+      {page.items.length ? (
+        <>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {page.items.map((pet) => <PetCard key={pet.id} pet={pet} />)}
+          </div>
+          {page.nextCursor ? (
+            <div className="mt-8 flex justify-center">
+              <Link
+                href={`/explore?${nextParams.toString()}`}
+                className="rounded-xl border bg-surface px-6 py-3 text-sm font-bold text-accent hover:bg-surface-soft"
+              >
+                下一頁
+              </Link>
+            </div>
+          ) : null}
+        </>
       ) : (
         <EmptyState
-          title={pets.length ? "這組條件目前沒有結果" : "公開毛孩資料正在準備中"}
-          description={pets.length ? "試著放寬地區或物種條件，也可以清除搜尋重新看看。" : "資料通過合作團隊確認後才會公開。先完成生活偏好，我們會在有合適毛孩時提供更清楚的理由。"}
-          action={pets.length ? { href: "/explore", label: "清除篩選" } : { href: "/recommend", label: "填寫生活偏好" }}
+          title="找不到符合條件的動物"
+          description="請放寬地區或來源條件後再試一次。"
+          action={{ href: "/explore", label: "清除篩選" }}
         />
       )}
     </PageShell>

@@ -17,9 +17,11 @@ const LABELS: Record<AdminPetReviewAction, string> = {
 export function AdminPetActions({
   petId,
   actions,
+  sourceType = "private_foster",
 }: {
   petId: string;
   actions: readonly AdminPetReviewAction[];
+  sourceType?: "private_foster" | "government";
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -31,10 +33,17 @@ export function AdminPetActions({
     setError(null);
     setActive(action);
     try {
-      const response = await fetch(`/api/admin/pets/${petId}/review`, {
-        method: "POST",
+      const governmentPatch = action === "hide"
+        ? { status: "hidden" }
+        : action === "unpublish"
+          ? { isPublished: false }
+          : null;
+      const response = await fetch(
+        sourceType === "government" ? `/api/admin/pets/${petId}` : `/api/admin/pets/${petId}/review`,
+        {
+        method: sourceType === "government" ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, note: note.trim() || undefined }),
+        body: JSON.stringify(sourceType === "government" ? governmentPatch : { action, note: note.trim() || undefined }),
       });
       const payload = (await response.json()) as { error?: { message?: string } };
       if (!response.ok) {
@@ -53,7 +62,7 @@ export function AdminPetActions({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold text-muted">
+      {sourceType === "private_foster" ? <label className="text-xs font-semibold text-muted">
         審核備註
         <textarea
           value={note}
@@ -62,7 +71,7 @@ export function AdminPetActions({
           className="mt-1 min-h-20 w-full rounded-xl border bg-surface px-3 py-2 text-sm text-foreground"
           placeholder="要求補件時必填；其他動作可選填"
         />
-      </label>
+      </label> : null}
       <div className="flex flex-wrap gap-2">
         {actions.map((action) => (
           <Button

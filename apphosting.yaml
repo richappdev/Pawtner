@@ -92,6 +92,17 @@ env:
     availability:
       - RUNTIME
 
+  - variable: FEATURE_GOVERNMENT_PETS_ENABLED
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: MOA_SYNC_SECRET
+    secret: MOA_SYNC_SECRET
+    availability:
+      - RUNTIME
+
   # Optional secrets — set later when needed:
   # npx -y firebase-tools@latest apphosting:secrets:set PAYMENT_WEBHOOK_SECRET --project pawtner-app-2026
   # npx -y firebase-tools@latest apphosting:secrets:set SENTRY_DSN --project pawtner-app-2026

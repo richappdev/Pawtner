@@ -1,14 +1,37 @@
+import Link from "next/link";
+
 import { Card } from "@/components/ui/card";
+
+const categories = [
+  ["日常飲食", "飼料、罐頭與營養補充"],
+  ["清潔照護", "尿墊、貓砂與日常清潔"],
+  ["醫療支持", "復健、保健與照護用品"],
+] as const;
 
 export default function ProductsPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-10">
-      <p className="text-sm font-bold tracking-[0.16em] text-accent uppercase">Materials</p>
-      <h1 className="display mt-2 text-4xl">照護物資</h1>
-      <p className="mt-3 max-w-xl leading-7 text-muted">為中途照護挑選需要的用品。這裡是商品目錄，並非募款頁面。</p>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {["清潔與消毒", "日常飲食", "外出照護"].map((name) => <Card key={name}><p className="font-semibold">{name}</p><p className="mt-2 text-sm text-muted">商品即將上架。</p></Card>)}
-      </div>
+    <main className="min-h-screen">
+      <header className="border-b bg-surface px-5 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <Link href="/" className="latin-display text-2xl font-semibold">Pawtner</Link>
+          <Link href="/foster/materials" className="text-sm font-bold text-accent">返回照護物資</Link>
+        </div>
+      </header>
+      <section className="mx-auto max-w-7xl px-5 py-12 sm:px-7 sm:py-16">
+        <p className="eyebrow">CARE MATERIALS</p>
+        <h1 className="display mt-2 text-4xl sm:text-5xl">照護物資</h1>
+        <p className="mt-4 max-w-2xl leading-7 text-muted">讓照護需求被清楚看見。商品與結帳功能仍受試營運開關控制，不會顯示虛構庫存。</p>
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map(([name, description], index) => (
+            <Card key={name} tone={index === 1 ? "mint" : "surface"} className="min-h-56">
+              <p className="latin-display text-3xl text-clay">0{index + 1}</p>
+              <h2 className="display mt-8 text-2xl">{name}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted">{description}</p>
+              <p className="mt-7 text-sm font-bold text-accent">品項準備中</p>
+            </Card>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

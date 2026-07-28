@@ -1,13 +1,34 @@
 import Link from "next/link";
 
+import { Alert } from "@/components/ui/alert";
+
 export function LegalStub({ title }: { title: string }) {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
-      <Link href="/" className="display text-2xl">Pawtner</Link>
-      <p className="mt-12 text-sm font-bold tracking-[0.16em] text-accent uppercase">Legal</p>
-      <h1 className="display mt-2 text-4xl">{title}</h1>
-      <p className="mt-8 rounded-xl border border-dashed p-4 text-sm font-semibold text-muted">待法務審查</p>
-      <p className="mt-6 leading-8 text-muted">本頁為臺灣服務上線前的條款草案位置。正式內容將於法務審查、資料處理與相關法令確認後公告。</p>
+    <main className="mx-auto min-h-screen w-full max-w-4xl px-5 py-8 sm:px-7 sm:py-12">
+      <Link href="/" className="latin-display text-2xl font-semibold">Pawtner</Link>
+      <div className="mt-14 grid gap-10 md:grid-cols-[13rem_1fr]">
+        <div>
+          <p className="eyebrow">LEGAL RECORD</p>
+          <p className="mt-3 text-sm leading-6 text-muted">透明流程的一部分，是讓規則可以被找到、讀懂與再次確認。</p>
+        </div>
+        <article>
+          <h1 className="display text-4xl sm:text-5xl">{title}</h1>
+          <div className="mt-8">
+            <Alert title="正式內容準備中" tone="warning">
+              這個頁面保留給正式政策文件。目前請勿將此頁視為完整法律條款；封閉試營運期間如有疑問，請直接聯繫 Pawtner 團隊。
+            </Alert>
+          </div>
+          <section className="mt-9 border-t pt-8">
+            <h2 className="display text-2xl">我們會清楚說明</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-7 text-muted">
+              <li>資料如何使用、保存與刪除</li>
+              <li>領養、中途、捐款或交易流程中的責任</li>
+              <li>AI 與媒體內容如何產生、審核與標示</li>
+            </ul>
+          </section>
+          <Link href="/" className="mt-10 inline-block font-bold text-accent underline underline-offset-4">回到首頁</Link>
+        </article>
+      </div>
     </main>
   );
 }

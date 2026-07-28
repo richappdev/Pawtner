@@ -117,7 +117,7 @@ export default async function AdminPetDetailPage({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="display text-4xl">{pet.name}</h1>
           <Badge>{pet.status}</Badge>
-          <Badge className={pet.is_published ? "bg-[#d8f3e7]" : "bg-[#f3e8e0] text-[#7a3f1d]"}>
+          <Badge variant={pet.is_published ? "success" : "pending"}>
             {pet.is_published ? "published" : "draft"}
           </Badge>
         </div>
@@ -184,10 +184,10 @@ export default async function AdminPetDetailPage({
         ) : (
           <ul className="mt-4 space-y-3">
             {health.map((record) => (
-              <li key={record.id} className="rounded-xl border border-[#e4efeb] px-4 py-3">
+              <li key={record.id} className="rounded-xl border px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold">{record.title}</p>
-                  {record.is_critical ? <Badge className="bg-[#f8e0e0] text-[#8a1f1f]">critical</Badge> : null}
+                  {record.is_critical ? <Badge variant="danger">需要留意</Badge> : null}
                 </div>
                 <p className="mt-1 text-xs text-muted">{record.record_date}</p>
                 {record.details ? <p className="mt-2 text-sm leading-6">{record.details}</p> : null}
@@ -204,11 +204,11 @@ export default async function AdminPetDetailPage({
         ) : (
           <ul className="mt-4 space-y-2 text-sm">
             {media.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4efeb] px-4 py-3">
+              <li key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3">
                 <Badge>{item.media_type}</Badge>
                 {item.is_cover ? <Badge>cover</Badge> : null}
                 {item.is_ai_edited ? <Badge>AI</Badge> : null}
-                {item.is_public ? <Badge>public</Badge> : <Badge className="bg-[#f3e8e0] text-[#7a3f1d]">private</Badge>}
+                {item.is_public ? <Badge variant="success">公開</Badge> : <Badge variant="pending">私人</Badge>}
                 <span className="break-all text-muted">{item.storage_path}</span>
               </li>
             ))}

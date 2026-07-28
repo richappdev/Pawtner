@@ -43,7 +43,7 @@ export function PilotInvitationForm() {
       <Input name="email" type="email" required placeholder="pilot@example.com" />
       <select
         name="intendedRole"
-        className="rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm"
+        className="rounded-xl border bg-surface px-3 py-2 text-sm"
         defaultValue="adopter"
       >
         <option value="adopter">Adopter</option>
@@ -53,7 +53,7 @@ export function PilotInvitationForm() {
       <Button type="submit" disabled={pending}>{pending ? "建立中…" : "建立邀請"}</Button>
       {message ? <p className="md:col-span-4 text-sm text-muted">{message}</p> : null}
       {inviteUrl ? (
-        <output className="md:col-span-4 break-all rounded-xl bg-[#f4faf8] p-3 text-xs">
+        <output className="md:col-span-4 break-all rounded-xl bg-surface-soft p-3 text-xs">
           {inviteUrl}
         </output>
       ) : null}

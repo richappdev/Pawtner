@@ -1,3 +1,14 @@
-import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
-export default function FosterMaterialsPage() { return <PageShell eyebrow="MATERIALS" title="照護物資"><p className="mt-4 leading-7 text-muted">需要的照護物資與採購紀錄都會在這裡。</p><Link href="/products" className="mt-8 inline-block rounded-full bg-accent px-5 py-3 font-semibold text-white">瀏覽物資</Link></PageShell>; }
+import { ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+export default function FosterMaterialsPage() {
+  return (
+    <PageShell eyebrow="MATERIALS" title="照護物資" description="把毛孩需要的物資與採購紀錄放在同一個位置。" width="lg" role="foster" headerAction={<ButtonLink href="/products" variant="warm">瀏覽物資</ButtonLink>}>
+      <Card tone="warm" className="mt-8">
+        <h2 className="display text-2xl">願望清單仍在準備中</h2>
+        <p className="mt-3 max-w-xl leading-7 text-muted">物資可以先瀏覽；建立公開願望清單與採購追蹤功能尚未啟用。</p>
+      </Card>
+    </PageShell>
+  );
+}

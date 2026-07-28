@@ -1,11 +1,25 @@
 import { clsx } from "clsx";
 import type { HTMLAttributes } from "react";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function Card({
+  className,
+  interactive = false,
+  tone = "surface",
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  interactive?: boolean;
+  tone?: "surface" | "sage" | "mint" | "warm" | "neutral";
+}) {
   return (
     <div
       className={clsx(
-        "rounded-3xl border bg-white p-5 shadow-[0_8px_30px_rgb(26_26_24/0.04)]",
+        "rounded-[20px] border p-5",
+        tone === "surface" && "bg-surface shadow-[var(--shadow-soft)]",
+        tone === "sage" && "border-transparent bg-sage/60",
+        tone === "mint" && "border-transparent bg-mint",
+        tone === "warm" && "border-transparent bg-[#faeee8]",
+        tone === "neutral" && "bg-surface-soft",
+        interactive && "lift-on-hover",
         className,
       )}
       {...props}

@@ -55,7 +55,7 @@ export function AdminPetsTable({
               name="q"
               defaultValue={filters.q ?? ""}
               placeholder="名稱或地區"
-              className="w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"
             />
           </label>
           <label className="text-sm">
@@ -63,7 +63,7 @@ export function AdminPetsTable({
             <select
               name="status"
               defaultValue={filters.status ?? ""}
-              className="w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"
             >
               <option value="">全部</option>
               {STATUS_OPTIONS.map((status) => (
@@ -78,7 +78,7 @@ export function AdminPetsTable({
             <select
               name="species"
               defaultValue={filters.species ?? ""}
-              className="w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"
             >
               <option value="">全部</option>
               {SPECIES_OPTIONS.map((species) => (
@@ -93,7 +93,7 @@ export function AdminPetsTable({
             <select
               name="isPublished"
               defaultValue={filters.isPublished ?? ""}
-              className="w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm"
+              className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"
             >
               <option value="">全部</option>
               <option value="true">已刊登</option>
@@ -103,7 +103,7 @@ export function AdminPetsTable({
           <div className="md:col-span-4">
             <button
               type="submit"
-              className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-[#094b41]"
+              className="min-h-11 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-deep"
             >
               套用篩選
             </button>
@@ -117,9 +117,9 @@ export function AdminPetsTable({
           <p className="mt-2 text-sm leading-6 text-muted">調整篩選條件，或等待中途建立毛孩檔案。</p>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#d7e4e0] bg-white">
+        <div className="overflow-x-auto rounded-2xl border bg-surface">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[#d7e4e0] bg-[#f4faf8] text-xs uppercase tracking-wide text-muted">
+            <thead className="border-b bg-surface-soft text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">名稱</th>
                 <th className="px-4 py-3 font-semibold">物種</th>
@@ -133,7 +133,7 @@ export function AdminPetsTable({
             </thead>
             <tbody>
               {pets.map((pet) => (
-                <tr key={pet.id} className="border-b border-[#e8f1ee] last:border-b-0">
+                <tr key={pet.id} className="border-b last:border-b-0">
                   <td className="px-4 py-3">
                     <Link href={`/admin/pets/${pet.id}`} className="font-semibold text-accent underline-offset-2 hover:underline">
                       {pet.name}
@@ -145,7 +145,7 @@ export function AdminPetsTable({
                     <Badge>{pet.status}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge className={pet.is_published ? "bg-[#d8f3e7]" : "bg-[#f3e8e0] text-[#7a3f1d]"}>
+                    <Badge variant={pet.is_published ? "success" : "pending"}>
                       {pet.is_published ? "published" : "draft"}
                     </Badge>
                   </td>

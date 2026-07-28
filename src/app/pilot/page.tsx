@@ -1,27 +1,29 @@
+import { Card } from "@/components/ui/card";
+
 const items = [
-  "確認合作中途與公開聯絡窗口",
-  "完成毛孩資料、照片與送養狀態檢查",
-  "設定領養申請回覆流程與責任人",
-  "確認個資、領養與中途條款已經法務審查",
-  "測試登入、收藏、推薦與申請的完整路徑",
-  "確認物資商品、付款與配送資訊",
-  "建立緊急事件與爭議處理聯絡方式",
+  "確認邀請、登入與角色權限",
+  "建立毛孩草稿並補齊必要資料",
+  "提交資料並完成合作團隊審核",
+  "確認公開頁不含私人地址與內部備註",
+  "走查收藏、申請與狀態變更流程",
+  "確認捐款、物資與功能開關",
+  "記錄問題、回報與後續修正",
 ];
 
 export default function PilotPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
-      <p className="text-sm font-bold tracking-[0.16em] text-accent uppercase">Pilot</p>
-      <h1 className="display mt-2 text-4xl">試營運上線清單</h1>
-      <p className="mt-4 leading-7 text-muted">只讀清單，協助團隊在公開前逐項確認。</p>
-      <ol className="mt-10 space-y-4">
+    <main className="mx-auto min-h-screen w-full max-w-5xl px-5 py-12 sm:px-7 sm:py-16">
+      <p className="eyebrow">CLOSED PILOT</p>
+      <h1 className="display mt-2 text-4xl sm:text-5xl">試營運上線清單</h1>
+      <p className="mt-4 max-w-2xl leading-7 text-muted">用一致的順序確認最重要的信任、資料與操作路徑。</p>
+      <div className="mt-10 grid gap-4">
         {items.map((item, index) => (
-          <li key={item} className="flex items-start gap-4 border-b pb-4">
-            <span className="display text-2xl text-accent">{String(index + 1).padStart(2, "0")}</span>
-            <span className="pt-1 font-semibold">{item}</span>
-          </li>
+          <Card key={item} tone={index % 3 === 1 ? "mint" : "surface"} className="flex items-center gap-5">
+            <span className="latin-display text-3xl text-clay">{String(index + 1).padStart(2, "0")}</span>
+            <span className="font-bold">{item}</span>
+          </Card>
         ))}
-      </ol>
+      </div>
     </main>
   );
 }

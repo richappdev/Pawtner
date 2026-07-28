@@ -59,7 +59,7 @@ export function AdminPetActions({
           value={note}
           onChange={(event) => setNote(event.target.value)}
           maxLength={2_000}
-          className="mt-1 min-h-20 w-full rounded-xl border border-[#d7e4e0] bg-white px-3 py-2 text-sm text-foreground"
+          className="mt-1 min-h-20 w-full rounded-xl border bg-surface px-3 py-2 text-sm text-foreground"
           placeholder="要求補件時必填；其他動作可選填"
         />
       </label>

@@ -11,6 +11,7 @@
     "test:db": "supabase test db --local supabase/tests",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:ui": "node scripts/run-ui-tests.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",

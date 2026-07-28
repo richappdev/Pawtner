@@ -10,6 +10,7 @@ import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
+import { getPublicPet, listPublicPets } from "@/lib/pets/public-data";
 import { sanitizePetForPublic } from "@/lib/pets/public";
 import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
@@ -42,20 +43,29 @@ async function publicDb() {
 
 export async function GET(request: Request) {
   const path = pathname(request);
-  const service = await publicDb();
-  if ("response" in service) return service.response;
-  const db: Db = service.supabase;
 
   if (path === "/api/pets") {
-    const { data, error } = await db.from("pets_public").select("*").order("published_at", { ascending: false });
-    return failed(error) ?? jsonOk((data ?? []).map((pet) => sanitizePetForPublic(pet as object)));
+    try {
+      return jsonOk(await listPublicPets());
+    } catch {
+      return jsonError("Unable to load public pets.", 500);
+    }
   }
   if (path.startsWith("/api/pets/")) {
     const id = segmentId(request, "pets");
     if (!uuid.safeParse(id).success) return jsonError("Invalid pet ID.", 422);
-    const { data, error } = await db.from("pets_public").select("*").eq("id", id).maybeSingle();
-    return failed(error) ?? (data ? jsonOk(sanitizePetForPublic(data as object)) : jsonError("Pet not found.", 404));
+    try {
+      const pet = await getPublicPet(id);
+      return pet ? jsonOk(pet) : jsonError("Pet not found.", 404);
+    } catch {
+      return jsonError("Unable to load public pet.", 500);
+    }
   }
+
+  const service = await publicDb();
+  if ("response" in service) return service.response;
+  const db: Db = service.supabase;
+
   if (path.startsWith("/api/organizations/")) {
     const id = segmentId(request, "organizations");
     const { data, error } = await db

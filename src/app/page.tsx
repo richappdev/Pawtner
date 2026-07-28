@@ -1,79 +1,134 @@
 import Link from "next/link";
 
+import { PetCard } from "@/components/pet-card";
+import { PetCover } from "@/components/pet-media";
+import { ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { canAccessAdmin } from "@/lib/auth/permissions";
 import { getSessionActor } from "@/lib/auth/session-actor";
-
-function AdminPetsIconLink() {
-  return (
-    <Link
-      href="/admin/pets"
-      aria-label="管理毛孩"
-      title="管理毛孩"
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#1a1a18]/15 text-accent transition hover:bg-white/70"
-    >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-        <path
-          d="M12 3.5c1.2 0 2.2.9 2.2 2.1 0 1.5-1.3 2.4-2.2 3.4-.9-1-2.2-1.9-2.2-3.4 0-1.2 1-2.1 2.2-2.1Z"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path
-          d="M7.2 7.2c1.1 0 1.9.9 1.9 1.9S8 11 7.2 11 5.3 10.1 5.3 9.1s.8-1.9 1.9-1.9Zm9.6 0c1.1 0 1.9.9 1.9 1.9S18 11 16.8 11s-1.9-.9-1.9-1.9.8-1.9 1.9-1.9ZM5.8 12.4c1.2 0 2.1 1 2.1 2.2s-1 2.1-2.1 2.1-2.2-1-2.2-2.1 1-2.2 2.2-2.2Zm12.4 0c1.2 0 2.2 1 2.2 2.2s-1 2.1-2.2 2.1-2.1-1-2.1-2.1 1-2.2 2.1-2.2Z"
-          fill="currentColor"
-        />
-        <path
-          d="M12 11.2c2.6 0 4.7 2.4 4.7 4.6 0 1.7-1.5 2.7-4.7 2.7s-4.7-1-4.7-2.7c0-2.2 2.1-4.6 4.7-4.6Z"
-          fill="currentColor"
-        />
-      </svg>
-    </Link>
-  );
-}
+import { listPublicPets } from "@/lib/pets/public-data";
 
 export default async function LandingPage() {
-  const session = await getSessionActor();
+  const [session, pets] = await Promise.all([
+    getSessionActor(),
+    listPublicPets(3).catch(() => []),
+  ]);
   const showAdminPets = session ? canAccessAdmin(session.actor) : false;
-  const isLoggedIn = session !== null;
 
   return (
-    <main className="atmosphere relative flex min-h-screen overflow-hidden px-5 py-6">
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-between">
-        <header className="flex items-center justify-between">
-          <span className="display text-3xl font-semibold">Pawtner</span>
-          <div className="flex items-center gap-3">
-            {showAdminPets ? <AdminPetsIconLink /> : null}
-            <Link
-              href={isLoggedIn ? "/explore" : "/login"}
-              className="text-sm font-semibold underline underline-offset-4"
-            >
-              {isLoggedIn ? "進入主頁" : "登入"}
-            </Link>
+    <main>
+      <section className="atmosphere min-h-[92vh] overflow-hidden px-5 py-6">
+        <div className="mx-auto flex min-h-[calc(92vh-3rem)] max-w-7xl flex-col">
+          <header className="flex items-center justify-between">
+            <Link href="/" className="latin-display text-3xl font-semibold">Pawtner</Link>
+            <nav aria-label="主要導覽" className="flex items-center gap-2">
+              {showAdminPets ? <ButtonLink href="/admin/pets" variant="quiet">管理毛孩</ButtonLink> : null}
+              <ButtonLink href={session ? "/explore" : "/login"} variant="secondary">
+                {session ? "進入 Pawtner" : "登入"}
+              </ButtonLink>
+            </nav>
+          </header>
+
+          <div className="grid flex-1 items-center gap-10 py-14 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
+            <div className="max-w-2xl">
+              <p className="eyebrow">A WARM RECORD OF A REAL LIFE</p>
+              <h1 className="display mt-5 text-5xl leading-[1.08] sm:text-6xl lg:text-7xl">
+                讓每次相遇，
+                <span className="block text-accent">都更接近一個家。</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-muted">
+                不只看見可愛，更看懂牠的生活、需要與適合的家。用透明資料與負責任的媒合，陪你慢慢做出重要決定。
+              </p>
+              <form action="/explore" className="mt-8 flex max-w-xl flex-col gap-3 rounded-[18px] bg-surface p-3 shadow-[var(--shadow-soft)] sm:flex-row">
+                <label className="sr-only" htmlFor="home-search">搜尋地區、名字或品種</label>
+                <input
+                  id="home-search"
+                  name="q"
+                  placeholder="搜尋地區、名字或品種"
+                  className="min-h-12 flex-1 rounded-xl px-4 outline-none"
+                />
+                <button className="min-h-12 rounded-xl bg-accent px-6 font-bold text-white hover:bg-accent-deep">
+                  探索毛孩
+                </button>
+              </form>
+              <div className="mt-5 flex flex-wrap items-center gap-4 text-sm font-semibold">
+                <Link href="/foster" className="text-accent underline underline-offset-4">我是中途照護者</Link>
+                <span className="text-muted">資料來源清楚・狀態透明・不以罪惡感催促</span>
+              </div>
+            </div>
+
+            <div className="relative mx-auto w-full max-w-xl">
+              <div className="absolute -left-5 -top-5 h-36 w-36 rounded-[38%] bg-clay/80" aria-hidden="true" />
+              <div className="absolute -bottom-6 -right-5 h-44 w-44 rounded-full bg-apricot/80" aria-hidden="true" />
+              <PetCover
+                media={pets[0]?.coverMedia ?? null}
+                name={pets[0]?.name ?? "等待相遇的毛孩"}
+                priority
+                className="relative aspect-[4/3] rounded-[28px] border-[10px] border-surface shadow-[var(--shadow-lift)]"
+              />
+              <Card className="absolute -bottom-8 left-5 right-5 sm:left-auto sm:w-72">
+                <p className="eyebrow">LIFE RECORD</p>
+                <p className="display mt-2 text-xl">{pets[0]?.name ?? "每一份資料，都代表一個生命"}</p>
+                <p className="mt-2 text-sm leading-6 text-muted">認識牠的日常、健康、個性與資料來源，再決定下一步。</p>
+              </Card>
+            </div>
           </div>
-        </header>
-        <section className="max-w-2xl py-20 sm:py-28">
-          <p className="mb-5 text-sm font-bold tracking-[0.18em] text-accent uppercase">Find your pawtner</p>
-          <h1 className="display text-5xl leading-[0.95] tracking-tight sm:text-7xl">Pawtner</h1>
-          <p className="display mt-5 max-w-xl text-3xl leading-tight sm:text-4xl">讓每次相遇，都更接近一個家。</p>
-          <p className="mt-6 max-w-md text-lg leading-8 text-[#4d4d47]">
-            以清楚的資訊與貼近需求的推薦，陪你認識正在等待的毛孩。
-          </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/explore"
-              className="rounded-full bg-accent px-6 py-3 text-center font-semibold text-white hover:bg-[#094b41]"
-            >
-              探索毛孩
-            </Link>
-            <Link
-              href="/foster"
-              className="rounded-full border border-[#1a1a18] px-6 py-3 text-center font-semibold hover:bg-white/60"
-            >
-              我是中途
-            </Link>
+        </div>
+      </section>
+
+      <section className="bg-surface px-5 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-px overflow-hidden rounded-[24px] border bg-line md:grid-cols-3">
+            {[
+              ["01", "先認識真實生活", "照片之外，也看見照護紀錄、活動量與家庭條件。"],
+              ["02", "理解為何適合", "推薦會說明理由、疑問，以及目前還缺少的資訊。"],
+              ["03", "清楚知道下一步", "從表達興趣到見面與試養，每個狀態都能看懂。"],
+            ].map(([number, title, description], index) => (
+              <div key={number} className={index === 1 ? "bg-mint p-7" : "bg-surface p-7"}>
+                <p className="latin-display text-3xl text-clay">{number}</p>
+                <h2 className="display mt-5 text-2xl">{title}</h2>
+                <p className="mt-3 leading-7 text-muted">{description}</p>
+              </div>
+            ))}
           </div>
-        </section>
-        <p className="text-sm text-muted">AI 寵物領養與中途支持</p>
-      </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="eyebrow">MEET THEM</p>
+              <h2 className="display mt-2 text-4xl">正在等待被認識的牠</h2>
+            </div>
+            <ButtonLink href="/explore" variant="secondary">查看全部毛孩</ButtonLink>
+          </div>
+          {pets.length ? (
+            <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {pets.map((pet) => <PetCard key={pet.id} pet={pet} />)}
+            </div>
+          ) : (
+            <Card tone="mint" className="mt-9">
+              <h3 className="display text-2xl">公開資料正在準備中</h3>
+              <p className="mt-3 leading-7 text-muted">合作中途確認資料後，毛孩會出現在這裡。你仍可以先了解領養流程。</p>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      <footer className="border-t bg-surface px-5 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div>
+            <p className="latin-display text-2xl">Pawtner</p>
+            <p className="mt-1 text-sm text-muted">AI 寵物領養與中途支持</p>
+          </div>
+          <div className="flex flex-wrap gap-5 text-sm font-semibold text-muted">
+            <Link href="/legal/privacy">隱私權</Link>
+            <Link href="/legal/terms">服務條款</Link>
+            <Link href="/legal/ai-media">AI 與媒體說明</Link>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

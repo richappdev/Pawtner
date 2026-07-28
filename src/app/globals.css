@@ -1,46 +1,156 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf7;
-  --foreground: #1a1a18;
-  --accent: #0f6b5c;
-  --accent-deep: #094b41;
-  --muted: #6b6b63;
-  --line: #deded5;
-  --warm: #f0ede4;
+  --paper: #fbfaf5;
+  --surface: #ffffff;
+  --surface-soft: #f4f7f2;
+  --ink: #1d2421;
+  --ink-muted: #5f6964;
+  --forest: #0b6757;
+  --forest-deep: #07483e;
+  --mint: #ddeee8;
+  --sage: #a9cbbf;
+  --clay: #d96c4f;
+  --apricot: #f3c98b;
+  --line: #d9dfda;
+  --focus: #0b6757;
+  --success-fg: #0b6757;
+  --success-bg: #ddeee8;
+  --pending-fg: #7a5412;
+  --pending-bg: #fff0c9;
+  --process-fg: #305a8c;
+  --process-bg: #e5effa;
+  --adopted-fg: #6b3e76;
+  --adopted-bg: #f1e5f3;
+  --danger-fg: #9b2c2c;
+  --danger-bg: #fce7e7;
+  --shadow-soft: 0 8px 30px rgb(29 36 33 / 0.06);
+  --shadow-lift: 0 16px 40px rgb(29 36 33 / 0.1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-accent: var(--accent);
-  --color-muted: var(--muted);
-  --font-sans: var(--font-source);
-  --font-display: var(--font-fraunces);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--forest);
+  --color-accent-deep: var(--forest-deep);
+  --color-mint: var(--mint);
+  --color-sage: var(--sage);
+  --color-clay: var(--clay);
+  --color-apricot: var(--apricot);
+  --color-line: var(--line);
+  --font-sans: var(--font-noto-sans), var(--font-source);
+  --font-display: var(--font-noto-serif), var(--font-fraunces);
 }
 
 * {
   border-color: var(--line);
 }
 
+html {
+  background: var(--paper);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-source), sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-noto-sans), var(--font-source), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 
 ::selection {
-  background: #bde0d8;
-  color: var(--foreground);
+  background: var(--apricot);
+  color: var(--ink);
 }
 
 .display {
+  font-family: var(--font-noto-serif), var(--font-fraunces), serif;
+  text-wrap: balance;
+}
+
+.latin-display {
   font-family: var(--font-fraunces), serif;
 }
 
 .atmosphere {
   background:
-    radial-gradient(circle at 82% 16%, rgb(226 195 143 / 72%), transparent 23rem),
-    radial-gradient(circle at 12% 84%, rgb(133 188 170 / 55%), transparent 23rem),
-    linear-gradient(135deg, #f7f4eb 0%, #e6eee8 54%, #ceded1 100%);
+    radial-gradient(circle at 84% 14%, rgb(243 201 139 / 65%), transparent 26rem),
+    radial-gradient(circle at 8% 86%, rgb(169 203 191 / 55%), transparent 25rem),
+    linear-gradient(135deg, #fbf7ed 0%, #eef3ee 54%, #dce8df 100%);
+}
+
+.paper-grid {
+  background-image:
+    linear-gradient(rgb(29 36 33 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(29 36 33 / 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.eyebrow {
+  color: var(--forest);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.field-label {
+  display: block;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.data-label {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lift-on-hover {
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .lift-on-hover:hover {
+    border-color: var(--sage);
+    box-shadow: var(--shadow-lift);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .lift-on-hover:hover {
+    transform: none;
+  }
 }

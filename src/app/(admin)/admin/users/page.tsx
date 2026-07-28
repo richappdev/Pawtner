@@ -31,7 +31,7 @@ export default async function AdminUsersPage() {
       </Card>
       <Card>
         <h2 className="font-semibold">參與者</h2>
-        <ul className="mt-4 divide-y divide-[#e8f1ee]">
+        <ul className="mt-4 divide-y">
           {(users ?? []).map((user) => (
             <li key={user.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
               <div>
@@ -40,7 +40,7 @@ export default async function AdminUsersPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {(user.user_roles ?? []).map((item) => <Badge key={item.role}>{item.role}</Badge>)}
-                {user.suspended_at ? <Badge className="bg-[#f8e0e0] text-[#8a1f1f]">suspended</Badge> : null}
+                {user.suspended_at ? <Badge variant="danger">已停權</Badge> : null}
               </div>
             </li>
           ))}
@@ -48,7 +48,7 @@ export default async function AdminUsersPage() {
       </Card>
       <Card>
         <h2 className="font-semibold">邀請紀錄</h2>
-        <ul className="mt-4 divide-y divide-[#e8f1ee]">
+        <ul className="mt-4 divide-y">
           {(invitations ?? []).map((invite) => (
             <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
               <div>

@@ -48,7 +48,7 @@ export function GovernmentSyncPanel({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" disabled={pending} onClick={() => void sync(true)}>乾跑</Button>
+          <Button variant="secondary" disabled={pending} onClick={() => void sync(true)}>模擬測試</Button>
           <Button disabled={pending} onClick={() => void sync(false)}>{pending ? "同步中…" : "立即同步"}</Button>
         </div>
       </div>

@@ -121,6 +121,12 @@ export default async function LandingPage() {
           <div>
             <p className="latin-display text-2xl">Pawtner</p>
             <p className="mt-1 text-sm text-muted">AI 寵物領養與中途支持</p>
+            <a
+              href="mailto:app.developer.rich@gmail.com"
+              className="mt-2 inline-block text-sm font-semibold text-accent underline decoration-transparent underline-offset-4 transition-colors hover:decoration-current"
+            >
+              app.developer.rich@gmail.com
+            </a>
           </div>
           <div className="flex flex-wrap gap-5 text-sm font-semibold text-muted">
             <Link href="/legal/privacy">隱私權</Link>

@@ -7,7 +7,7 @@
 - [x] Provisioning assigns Firebase custom claim `role: authenticated` (required by Supabase)
 - [ ] Enable Supabase **Third-party Auth → Firebase** in the dashboard
 - [ ] Enable feature flags for a test cohort
-- [ ] Redeploy App Hosting after enabling flags
+- [x] Deploy the Cloud Run production service with the flags enabled
 
 ## Manual: enable Supabase third-party Firebase Auth
 
@@ -32,21 +32,21 @@ FIREBASE_AUTH_EMAIL_COHORT=your-test@example.com
 NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT=your-test@example.com
 ```
 
-Also ensure Firebase Admin can verify tokens locally (`FIREBASE_ADMIN_CLIENT_EMAIL` + `FIREBASE_ADMIN_PRIVATE_KEY`) or use ADC on App Hosting.
+Also ensure Firebase Admin can verify tokens locally
+(`FIREBASE_ADMIN_CLIENT_EMAIL` + `FIREBASE_ADMIN_PRIVATE_KEY`) or use ADC on
+Cloud Run.
 
-## Enable on App Hosting
+## Enable on Cloud Run
 
-Update `apphosting.yaml` values (or set secrets/env in console):
+Update the Cloud Run environment and the build-time values in
+`cloudbuild.yaml`:
 
 - `FEATURE_FIREBASE_AUTH_ENABLED=true`
 - `NEXT_PUBLIC_FEATURE_FIREBASE_AUTH_ENABLED=true`
 - optional cohort vars
 
-Then:
-
-```bash
-npx -y firebase-tools@latest deploy --only apphosting --project pawtner-app-2026
-```
+Build a new immutable image, deploy it to `pawtner-hosting-web`, and redeploy
+the pinned Firebase Hosting release.
 
 ## Exit criteria checklist
 

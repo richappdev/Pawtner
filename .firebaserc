@@ -3,6 +3,14 @@
     "default": "pawtner-app-2026",
     "staging": "pawtner-app-2026"
   },
-  "targets": {},
+  "targets": {
+    "pawtner-app-2026": {
+      "hosting": {
+        "production": [
+          "pawtner-tw"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

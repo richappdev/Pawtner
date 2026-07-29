@@ -5,7 +5,8 @@
 - Firebase project: `pawtner-app-2026`
 - App Hosting backend: `pawtner-web` (`asia-east1`)
 - App: Next.js `16.2.11` (see `package.json`)
-- Fallback: [`Dockerfile`](../Dockerfile) + Firebase Hosting rewrite to Cloud Run (`firebase.json` `hosting.rewrites`)
+- Production: [`Dockerfile`](../Dockerfile) + Firebase Hosting rewrite to an
+  independently managed Cloud Run service (`firebase.json` `hosting.rewrites`)
 
 ## Checklist (run on staging URL)
 
@@ -30,18 +31,19 @@ npx -y firebase-tools@latest apphosting:secrets:set NEXT_PUBLIC_FIREBASE_API_KEY
 # Deploy App Hosting (requires Blaze + linked repo or CLI source deploy)
 npx -y firebase-tools@latest deploy --only apphosting --project pawtner-app-2026
 
-# Cloud Run fallback build
-docker build -t pawtner-web .
+# Cloud Run production build
+gcloud builds submit --config cloudbuild.yaml --region asia-east1
 ```
 
 ## Decision
 
-- [x] **App Hosting** is the Phase 1 production path (backend `pawtner-web` created; spike checklist below)
-- [ ] **Cloud Run + Firebase Hosting** is the Phase 1 production path (App Hosting failed spike)
+- [ ] **App Hosting** is the production path (retained as the rollback endpoint)
+- [x] **Cloud Run + Firebase Hosting** is the production path
 
 | Field | Value |
 | --- | --- |
-| Decision | App Hosting primary (`pawtner-web`); Dockerfile retained as fallback |
-| Date | 2026-07-23 |
-| Staging URL | https://pawtner-web--pawtner-app-2026.asia-east1.hosted.app |
+| Decision | Firebase Hosting `pawtner-tw` to Cloud Run `pawtner-hosting-web` |
+| Date | 2026-07-29 |
+| Production URL | https://pawtner-tw.web.app |
+| Rollback URL | https://pawtner-web--pawtner-app-2026.asia-east1.hosted.app |
 | Operator | migration agent / project owner |

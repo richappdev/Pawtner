@@ -19,7 +19,8 @@
 
 ## Cutover steps
 
-1. Keep `FEATURE_FIREBASE_AUTH_ENABLED=true` on App Hosting.
+1. Keep `FEATURE_FIREBASE_AUTH_ENABLED=true` on the
+   `pawtner-hosting-web` Cloud Run service.
 2. Expand gradually via cohort env (redeploy after each change):
    - Start: `NEXT_PUBLIC_FIREBASE_AUTH_EMAIL_COHORT=smoke-test@gmail.com`
    - Add more emails comma-separated

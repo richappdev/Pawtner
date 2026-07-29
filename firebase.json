@@ -22,6 +22,7 @@
     ]
   },
   "hosting": {
+    "target": "production",
     "public": "public",
     "ignore": [
       "firebase.json",
@@ -32,8 +33,9 @@
       {
         "source": "**",
         "run": {
-          "serviceId": "pawtner-web",
-          "region": "asia-east1"
+          "serviceId": "pawtner-hosting-web",
+          "region": "asia-east1",
+          "pinTag": true
         }
       }
     ]

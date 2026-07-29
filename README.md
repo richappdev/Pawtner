@@ -122,8 +122,10 @@ Government data has two release gates:
 1. `FEATURE_GOVERNMENT_PETS_ENABLED` controls web application visibility.
 2. `pet_sources.public_enabled` controls visibility in the public database read model.
 
-The application feature flag is configured in `apphosting.yaml` and takes effect after a Firebase
-App Hosting deployment. The MOA source gate is managed in Supabase:
+The production application feature flag is configured on the
+`pawtner-hosting-web` Cloud Run service and takes effect after a Cloud Run
+deployment. The App Hosting configuration is retained only for rollback. The
+MOA source gate is managed in Supabase:
 
 ```sql
 -- Enable public MOA listings after the application deployment is healthy.

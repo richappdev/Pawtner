@@ -11,7 +11,8 @@ Generate one high-entropy value and store the same value in:
 
 1. Supabase Edge Function secret `MOA_SYNC_SECRET`.
 2. Supabase Vault secret named `moa_sync_secret`.
-3. Firebase App Hosting secret `MOA_SYNC_SECRET`.
+3. Google Secret Manager secret `MOA_SYNC_SECRET`, exposed only to the
+   `pawtner-hosting-web` Cloud Run service.
 
 Also store the Supabase project base URL in Vault as `project_url`. The migration creates the
 `30 10 * * *` UTC Cron job only when both Vault secrets already exist. If secrets are added after

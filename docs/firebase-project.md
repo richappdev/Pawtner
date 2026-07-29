@@ -34,7 +34,25 @@ storageBucket: pawtner-app-2026.firebasestorage.app
 
 API keys and Admin SDK credentials live in Secret Manager / local `.env.local` — **never commit them**.
 
-## App Hosting backend (non-production)
+## Firebase Hosting production
+
+| Field | Value |
+| --- | --- |
+| Site ID | `pawtner-tw` |
+| Target | `production` |
+| Primary URL | https://pawtner-tw.web.app |
+| Firebase alias | https://pawtner-tw.firebaseapp.com |
+| Cloud Run service | `pawtner-hosting-web` |
+| Cloud Run region | `asia-east1` |
+| Runtime service account | `pawtner-hosting-run@pawtner-app-2026.iam.gserviceaccount.com` |
+
+The Hosting catch-all rewrite is pinned to the deployed Cloud Run revision.
+Production images are built with [`cloudbuild.yaml`](../cloudbuild.yaml) and
+stored in the `pawtner-images` Artifact Registry repository. The runtime
+identity has Firebase Authentication Admin for user/custom-claim provisioning
+and per-secret Secret Manager access for the application secrets.
+
+## App Hosting backend (rollback)
 
 | Field | Value |
 | --- | --- |
@@ -52,7 +70,9 @@ Auth email/password providers were deployed via `firebase deploy --only auth`.
 
 ## Secrets (Secret Manager)
 
-Map via [`apphosting.yaml`](../apphosting.yaml):
+Production build and runtime mappings are defined by
+[`cloudbuild.yaml`](../cloudbuild.yaml) and the Cloud Run service. The retained
+App Hosting rollback mapping remains in [`apphosting.yaml`](../apphosting.yaml).
 
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`

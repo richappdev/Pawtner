@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminPetActions } from "@/components/admin/admin-pet-actions";
 import { GovernmentPublicationActions } from "@/components/admin/government-publication-actions";
 import { GovernmentPetEnrichmentForm } from "@/components/admin/government-pet-enrichment-form";
+import { PetMediaManager } from "@/components/admin/pet-media-manager";
 import {
   PetAttributeIcon,
   type PetAttribute,
@@ -12,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getAdminPet } from "@/lib/pets/admin-query";
+import { toAdminPetMediaItems } from "@/lib/pets/media";
 import { singleRelatedRecord } from "@/lib/pets/source-record";
 import type {
   PetSourcePublicationStatus,
@@ -76,6 +78,7 @@ interface AdminPetDetail {
     is_ai_edited: boolean;
     is_public: boolean;
     sort_order: number;
+    created_at: string;
   }> | null;
   pet_source_records?: {
     external_sub_id: string | null;
@@ -196,6 +199,14 @@ export default async function AdminPetDetailPage({
   const traits = pet.pet_traits?.[0];
   const health = pet.pet_health_records ?? [];
   const media = [...(pet.pet_media ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const mediaItems = await toAdminPetMediaItems(
+    supabase,
+    media.map((item) => ({
+      ...item,
+      pet_id: pet.id,
+      media_type: item.media_type === "video" ? "video" as const : "image" as const,
+    })),
+  );
   const source = singleRelatedRecord(pet.pet_source_records);
   const enrichment = pet.pet_editorial_overrides?.[0];
 
@@ -221,6 +232,14 @@ export default async function AdminPetDetailPage({
           {pet.foster_profiles?.region ? ` · ${pet.foster_profiles.region}` : ""}
         </p>
       </div>
+
+      <PetMediaManager
+        key={mediaItems.map((item) => `${item.id}:${item.sortOrder}:${item.isCover}`).join("|")}
+        petId={pet.id}
+        petName={pet.name}
+        sourceType={pet.source_type}
+        initialMedia={mediaItems}
+      />
 
       <Card className="max-w-3xl">
         <p className="font-semibold">審核操作</p>
@@ -375,24 +394,6 @@ export default async function AdminPetDetailPage({
         )}
       </Card>
 
-      <Card className="max-w-3xl">
-        <p className="font-semibold">媒體</p>
-        {media.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">尚無媒體檔案。</p>
-        ) : (
-          <ul className="mt-4 space-y-2 text-sm">
-            {media.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3">
-                <Badge>{item.media_type}</Badge>
-                {item.is_cover ? <Badge>cover</Badge> : null}
-                {item.is_ai_edited ? <Badge>AI</Badge> : null}
-                {item.is_public ? <Badge variant="success">公開</Badge> : <Badge variant="pending">私人</Badge>}
-                <span className="break-all text-muted">{item.external_url ?? item.storage_path}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
     </main>
   );
 }

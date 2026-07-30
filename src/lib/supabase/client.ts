@@ -2,7 +2,10 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 
-import { FIREBASE_ID_TOKEN_COOKIE, isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import {
+  FIREBASE_ID_TOKEN_COOKIE_NAMES,
+  isFirebaseAuthEnabled,
+} from "@/lib/auth/firebase-flags";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { getFirebaseIdToken } from "@/lib/firebase/session";
 
@@ -31,7 +34,10 @@ function hasFirebaseSessionHint(): boolean {
   } catch {
     // Firebase web config may be missing in some local setups.
   }
-  return document.cookie.split(";").some((part) => part.trim().startsWith(`${FIREBASE_ID_TOKEN_COOKIE}=`));
+  return document.cookie.split(";").some((part) => {
+    const cookie = part.trim();
+    return FIREBASE_ID_TOKEN_COOKIE_NAMES.some((name) => cookie.startsWith(`${name}=`));
+  });
 }
 
 /** Browser client for app data. May bind Firebase JWT via accessToken. */

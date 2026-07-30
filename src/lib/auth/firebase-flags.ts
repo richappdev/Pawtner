@@ -1,4 +1,12 @@
-export const FIREBASE_ID_TOKEN_COOKIE = "pawtner_firebase_id_token";
+// Firebase Hosting forwards only the specially named __session cookie to
+// Cloud Run. Keep the legacy name readable while existing direct-origin
+// sessions age out, but write all new sessions using __session.
+export const FIREBASE_ID_TOKEN_COOKIE = "__session";
+export const LEGACY_FIREBASE_ID_TOKEN_COOKIE = "pawtner_firebase_id_token";
+export const FIREBASE_ID_TOKEN_COOKIE_NAMES = [
+  FIREBASE_ID_TOKEN_COOKIE,
+  LEGACY_FIREBASE_ID_TOKEN_COOKIE,
+] as const;
 
 export function parseBool(raw: string | undefined): boolean {
   if (raw === undefined) return false;

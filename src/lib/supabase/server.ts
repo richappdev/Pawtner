@@ -2,7 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-import { FIREBASE_ID_TOKEN_COOKIE, isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
+import {
+  FIREBASE_ID_TOKEN_COOKIE_NAMES,
+  isFirebaseAuthEnabled,
+} from "@/lib/auth/firebase-flags";
 
 function requiredEnvironment(
   name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "SUPABASE_SERVICE_ROLE_KEY",
@@ -26,7 +29,9 @@ function publicAnonKey(): string {
 export async function createClient() {
   const cookieStore = await cookies();
   const firebaseToken = isFirebaseAuthEnabled()
-    ? cookieStore.get(FIREBASE_ID_TOKEN_COOKIE)?.value
+    ? FIREBASE_ID_TOKEN_COOKIE_NAMES
+        .map((name) => cookieStore.get(name)?.value)
+        .find((value) => value !== undefined)
     : undefined;
 
   if (firebaseToken) {

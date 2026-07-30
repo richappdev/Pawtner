@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { clearFirebaseIdTokenCookie } from "@/lib/auth/firebase-token";
+import {
+  clearFirebaseIdTokenCookie,
+  clearLegacyFirebaseIdTokenCookie,
+} from "@/lib/auth/firebase-token";
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 import { logger } from "@/lib/logging";
 import { createClient } from "@/lib/supabase/server";
@@ -25,5 +28,6 @@ export async function POST() {
   const response = NextResponse.json({ ok: true, providers });
   // Always clear Firebase cookie during dual-auth so leftover tokens cannot stick.
   response.headers.append("Set-Cookie", clearFirebaseIdTokenCookie());
+  response.headers.append("Set-Cookie", clearLegacyFirebaseIdTokenCookie());
   return response;
 }

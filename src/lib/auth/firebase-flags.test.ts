@@ -56,8 +56,24 @@ describe("readFirebaseIdTokenFromRequest", () => {
 
   it("reads the firebase id token cookie", async () => {
     const request = new Request("https://example.com/api/me", {
-      headers: { cookie: "pawtner_firebase_id_token=token%2Bvalue; other=1" },
+      headers: { cookie: "__session=token%2Bvalue; other=1" },
     });
     expect(await readFirebaseIdTokenFromRequest(request)).toBe("token+value");
+  });
+
+  it("temporarily reads the legacy firebase id token cookie", async () => {
+    const request = new Request("https://example.com/api/me", {
+      headers: { cookie: "pawtner_firebase_id_token=legacy%2Btoken; other=1" },
+    });
+    expect(await readFirebaseIdTokenFromRequest(request)).toBe("legacy+token");
+  });
+
+  it("prefers the Firebase Hosting session cookie over the legacy cookie", async () => {
+    const request = new Request("https://example.com/api/me", {
+      headers: {
+        cookie: "pawtner_firebase_id_token=legacy; __session=current",
+      },
+    });
+    expect(await readFirebaseIdTokenFromRequest(request)).toBe("current");
   });
 });

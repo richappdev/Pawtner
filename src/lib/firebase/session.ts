@@ -2,7 +2,10 @@
 
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 
-import { FIREBASE_ID_TOKEN_COOKIE } from "@/lib/auth/firebase-flags";
+import {
+  FIREBASE_ID_TOKEN_COOKIE,
+  FIREBASE_ID_TOKEN_COOKIE_NAMES,
+} from "@/lib/auth/firebase-flags";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 
 const MAX_AGE_SECONDS = 60 * 55;
@@ -13,7 +16,9 @@ export function writeFirebaseIdTokenCookie(idToken: string) {
 }
 
 export function clearFirebaseIdTokenCookieClient() {
-  document.cookie = `${FIREBASE_ID_TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+  for (const cookieName of FIREBASE_ID_TOKEN_COOKIE_NAMES) {
+    document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`;
+  }
 }
 
 export async function getFirebaseIdToken(forceRefresh = false): Promise<string | null> {

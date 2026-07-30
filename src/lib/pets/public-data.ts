@@ -9,22 +9,9 @@ import type {
   PublicPetSearch,
   PublicPetSummary,
 } from "@/lib/pets/public-types";
+import { PET_MEDIA_BUCKET, selectPublicPetMediaRows, type PetMediaRow } from "@/lib/pets/media";
 import type { PetSpecies, PetStatus } from "@/lib/schemas/pet";
 import { createServiceClient } from "@/lib/supabase/server";
-
-const MEDIA_BUCKET = "pet-media";
-
-type RawMedia = {
-  id: string;
-  pet_id: string;
-  storage_path: string | null;
-  external_url: string | null;
-  media_type: "image" | "video";
-  is_cover: boolean;
-  is_ai_edited: boolean;
-  is_public: boolean;
-  sort_order: number;
-};
 
 type RawPublicPet = {
   id: string;
@@ -90,7 +77,7 @@ function freshness(lastSeenAt: string | null): string | null {
 
 async function mediaByPet(
   supabase: SupabaseClient,
-  pets: Array<{ id: string; name: string }>,
+  pets: Array<{ id: string; name: string; source_type: "private_foster" | "government" }>,
 ): Promise<Map<string, PetMediaView[]>> {
   const result = new Map<string, PetMediaView[]>();
   if (!pets.length) return result;
@@ -102,10 +89,16 @@ async function mediaByPet(
     .eq("is_public", true)
     .order("is_cover", { ascending: false })
     .order("sort_order", { ascending: true });
-  const rows = (data ?? []) as RawMedia[];
-  const stored = rows.filter((row) => row.storage_path);
+  const rows = (data ?? []) as PetMediaRow[];
+  const selectedRows = pets.flatMap((pet) =>
+    selectPublicPetMediaRows(
+      rows.filter((row) => row.pet_id === pet.id),
+      pet.source_type,
+    ),
+  );
+  const stored = selectedRows.filter((row) => row.storage_path);
   const signed = stored.length
-    ? await supabase.storage.from(MEDIA_BUCKET).createSignedUrls(
+    ? await supabase.storage.from(PET_MEDIA_BUCKET).createSignedUrls(
         stored.map((row) => row.storage_path!),
         60 * 60,
       )
@@ -114,7 +107,7 @@ async function mediaByPet(
     stored.map((row, index) => [row.id, signed.data?.[index]?.signedUrl ?? null]),
   );
 
-  for (const row of rows) {
+  for (const row of selectedRows) {
     const url = row.external_url ?? signedUrls.get(row.id);
     if (!url) continue;
     const current = result.get(row.pet_id) ?? [];

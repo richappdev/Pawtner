@@ -81,8 +81,8 @@ export function MediaGallery({
   return (
     <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
       <PetCover media={images[0]} name={name} priority className="aspect-[4/3] rounded-[24px]" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
-        {images.slice(1, 3).map((item) => (
+      <div className="grid grid-cols-2 gap-3">
+        {images.slice(1, 5).map((item) => (
           <PetCover key={item.id} media={item} name={name} className="aspect-square rounded-[18px]" />
         ))}
         {images.length === 1 ? (

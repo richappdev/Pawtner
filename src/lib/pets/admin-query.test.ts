@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { listAdminPets } from "@/lib/pets/admin-query";
+import { listAdminPetRegions, listAdminPets } from "@/lib/pets/admin-query";
 
 function queryMock() {
   const query = {
@@ -9,9 +9,10 @@ function queryMock() {
     range: vi.fn(),
     eq: vi.fn(),
     or: vi.fn(),
+    not: vi.fn(),
     then: (resolve: (value: unknown) => void) => resolve({ data: [], error: null, count: 243 }),
   };
-  for (const method of ["select", "order", "range", "eq", "or"] as const) {
+  for (const method of ["select", "order", "range", "eq", "or", "not"] as const) {
     query[method].mockReturnValue(query);
   }
   return query;
@@ -45,5 +46,42 @@ describe("listAdminPets", () => {
     expect(query.select.mock.calls[0][0]).toContain("pet_source_records!inner");
     expect(query.eq).toHaveBeenCalledWith("pet_source_records.quality_status", "clean");
     expect(query.eq).toHaveBeenCalledWith("pet_source_records.publication_status", "approved");
+  });
+
+  it("filters by exact region", async () => {
+    const query = queryMock();
+    const supabase = { from: vi.fn(() => query) };
+
+    await listAdminPets(supabase as never, { region: "臺北市" });
+
+    expect(query.eq).toHaveBeenCalledWith("region", "臺北市");
+  });
+});
+
+describe("listAdminPetRegions", () => {
+  it("returns sorted distinct non-empty regions", async () => {
+    const query = {
+      select: vi.fn(),
+      not: vi.fn(),
+      then: (resolve: (value: unknown) => void) => resolve({
+        data: [
+          { region: "新北市" },
+          { region: "臺北市" },
+          { region: "新北市" },
+          { region: "  " },
+          { region: null },
+        ],
+        error: null,
+      }),
+    };
+    query.select.mockReturnValue(query);
+    query.not.mockReturnValue(query);
+    const supabase = { from: vi.fn(() => query) };
+
+    const regions = await listAdminPetRegions(supabase as never);
+
+    expect(query.select).toHaveBeenCalledWith("region");
+    expect(query.not).toHaveBeenCalledWith("region", "is", null);
+    expect(regions).toEqual(["新北市", "臺北市"]);
   });
 });

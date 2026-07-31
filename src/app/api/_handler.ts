@@ -206,6 +206,7 @@ export async function GET(request: Request) {
         publicationStatus: parsed.data.publicationStatus,
         isPublished: parsed.data.isPublished,
         q: parsed.data.q,
+        region: parsed.data.region,
       });
       return failed(error) ?? jsonOk(data ?? []);
     }

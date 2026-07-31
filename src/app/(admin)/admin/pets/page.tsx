@@ -1,10 +1,12 @@
 import { AdminPetsTable, type AdminPetListItem } from "@/components/admin/admin-pets-table";
 import { GovernmentSyncPanel } from "@/components/admin/government-sync-panel";
 import { Card } from "@/components/ui/card";
-import { listAdminPets } from "@/lib/pets/admin-query";
+import { listAdminPetRegions, listAdminPets } from "@/lib/pets/admin-query";
 import { adminPetPageQuerySchema } from "@/lib/schemas/pet";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+const DEFAULT_REGION = "臺北市";
 
 export default async function AdminPetsPage({
   searchParams,
@@ -16,7 +18,7 @@ export default async function AdminPetsPage({
     Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
   );
   const parsed = adminPetPageQuerySchema.safeParse(normalized);
-  const filters = parsed.success ? parsed.data : {
+  const base = parsed.success ? parsed.data : {
     status: undefined,
     species: undefined,
     source: undefined,
@@ -24,17 +26,24 @@ export default async function AdminPetsPage({
     publicationStatus: undefined,
     isPublished: undefined,
     q: undefined,
+    region: undefined,
     page: 1,
     pageSize: 10,
   };
+  const region =
+    !("region" in normalized) ? DEFAULT_REGION
+    : normalized.region?.trim() ? normalized.region.trim()
+    : undefined;
+  const filters = { ...base, region };
   const offset = (filters.page - 1) * filters.pageSize;
   const supabase = await createClient();
-  const [{ data, error, count }, { data: source }, { data: runs }] = await Promise.all([
+  const [{ data, error, count }, regionOptions, { data: source }, { data: runs }] = await Promise.all([
     listAdminPets(supabase, {
       ...filters,
       limit: filters.pageSize,
       offset,
     }),
+    listAdminPetRegions(supabase),
     supabase
       .from("pet_sources")
       .select("last_successful_sync_at,last_successful_record_count")
@@ -48,12 +57,16 @@ export default async function AdminPetsPage({
   ]);
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+  const options = region && !regionOptions.includes(region)
+    ? [...regionOptions, region].sort((a, b) => a.localeCompare(b, "zh-Hant"))
+    : regionOptions;
 
   if (!error && filters.page > totalPages) {
     const canonical = new URLSearchParams();
     for (const [key, value] of Object.entries(normalized)) {
       if (value !== undefined) canonical.set(key, value);
     }
+    if (!("region" in normalized) && region) canonical.set("region", region);
     canonical.set("page", String(totalPages));
     redirect(`/admin/pets?${canonical.toString()}`);
   }
@@ -86,7 +99,9 @@ export default async function AdminPetsPage({
             publicationStatus: filters.publicationStatus,
             isPublished: filters.isPublished === undefined ? undefined : filters.isPublished ? "true" : "false",
             q: filters.q,
+            region: filters.region,
           }}
+          regionOptions={options}
           page={filters.page}
           pageSize={filters.pageSize}
           total={total}

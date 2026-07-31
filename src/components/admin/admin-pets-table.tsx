@@ -77,6 +77,7 @@ function displayedPages(page: number, totalPages: number) {
 export function AdminPetsTable({
   pets,
   filters,
+  regionOptions,
   page,
   pageSize,
   total,
@@ -91,7 +92,9 @@ export function AdminPetsTable({
     publicationStatus?: string;
     isPublished?: string;
     q?: string;
+    region?: string;
   };
+  regionOptions: string[];
   page: number;
   pageSize: number;
   total: number;
@@ -199,16 +202,17 @@ export function AdminPetsTable({
   return (
     <div className="mt-8 space-y-6">
       <Card>
-        <form method="get" className="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
+        <form method="get" className="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
           <input type="hidden" name="pageSize" value={pageSize} />
           <label className="text-sm"><span className="mb-1 block font-semibold">搜尋</span><input name="q" defaultValue={filters.q ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm" /></label>
+          <label className="text-sm"><span className="mb-1 block font-semibold">地區</span><select name="region" defaultValue={filters.region ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{regionOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">動物狀態</span><select name="status" defaultValue={filters.status ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{STATUS_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">物種</span><select name="species" defaultValue={filters.species ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="dog">dog</option><option value="cat">cat</option><option value="other">other</option></select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">來源</span><select name="source" defaultValue={filters.source ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="private_foster">Pawtner 中途</option><option value="government">政府資料</option></select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">資料品質</span><select name="qualityStatus" defaultValue={filters.qualityStatus ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{QUALITY_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">發布流程</span><select name="publicationStatus" defaultValue={filters.publicationStatus ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option>{PUBLICATION_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block font-semibold">公開狀態</span><select name="isPublished" defaultValue={filters.isPublished ?? ""} className="w-full rounded-xl border bg-surface px-3 py-2 text-sm"><option value="">全部</option><option value="true">已公開</option><option value="false">未公開</option></select></label>
-          <div className="xl:col-span-7"><button type="submit" className="min-h-11 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white">套用篩選</button></div>
+          <div className="xl:col-span-8"><button type="submit" className="min-h-11 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white">套用篩選</button></div>
         </form>
       </Card>
 

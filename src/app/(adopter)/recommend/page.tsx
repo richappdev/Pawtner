@@ -1,5 +1,13 @@
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "推薦毛孩",
+  description: "個人化推薦結果。",
+  path: "/recommend",
+  robots: noIndexRobots,
+});
 
 export default function RecommendPage() {
   return (

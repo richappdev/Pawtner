@@ -1,6 +1,13 @@
 import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "照護物資",
+  description: "中途照護物資與日常用品目錄。讓照護需求被清楚看見，商品與結帳功能依試營運開關提供。",
+  path: "/products",
+});
 
 const categories = [
   ["日常飲食", "飼料、罐頭與營養補充"],

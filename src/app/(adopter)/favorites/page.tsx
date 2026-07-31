@@ -1,4 +1,12 @@
 import { EmptyState, PageShell } from "@/components/page-shell";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "收藏的毛孩",
+  description: "個人收藏清單。",
+  path: "/favorites",
+  robots: noIndexRobots,
+});
 
 export default function FavoritesPage() {
   return (

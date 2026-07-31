@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { JsonLd } from "@/components/json-ld";
 import { PetCard } from "@/components/pet-card";
 import { PetCover } from "@/components/pet-media";
 import { ButtonLink } from "@/components/ui/button";
@@ -7,6 +8,19 @@ import { Card } from "@/components/ui/card";
 import { canAccessAdmin } from "@/lib/auth/permissions";
 import { getSessionActor } from "@/lib/auth/session-actor";
 import { listPublicPets } from "@/lib/pets/public-data";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_NAME,
+  absoluteUrl,
+  pageMetadata,
+} from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: { absolute: DEFAULT_TITLE },
+  description: DEFAULT_DESCRIPTION,
+  path: "/",
+});
 
 export default async function LandingPage() {
   const [session, pets] = await Promise.all([
@@ -17,6 +31,16 @@ export default async function LandingPage() {
 
   return (
     <main>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: absoluteUrl("/"),
+          description: DEFAULT_DESCRIPTION,
+          email: "app.developer.rich@gmail.com",
+        }}
+      />
       <section className="atmosphere min-h-[92vh] overflow-hidden px-5 py-6">
         <div className="mx-auto flex min-h-[calc(92vh-3rem)] max-w-7xl flex-col">
           <header className="flex items-center justify-between">

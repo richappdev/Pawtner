@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import { Fraunces, Noto_Sans_TC, Noto_Serif_TC, Source_Sans_3 } from "next/font/google";
 
 import { Providers } from "@/components/providers";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_NAME,
+  absoluteUrl,
+  getSiteUrl,
+} from "@/lib/seo";
 
 import "./globals.css";
 
@@ -34,11 +41,30 @@ const notoSerif = Noto_Serif_TC({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "Pawtner｜讓每次相遇，都更接近一個家",
-    template: "%s｜Pawtner",
+    default: DEFAULT_TITLE,
+    template: `%s｜${SITE_NAME}`,
   },
-  description: "以透明的生命紀錄與負責任的媒合，陪你找到適合彼此的家人。",
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "zh_TW",
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: absoluteUrl("/"),
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

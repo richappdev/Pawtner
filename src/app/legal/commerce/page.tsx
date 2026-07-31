@@ -1,2 +1,8 @@
 import { LegalStub } from "@/components/legal-stub";
-export default function CommercePage() { return <LegalStub title="電子商務條款" />; }
+import { legalPageMetadata } from "@/lib/seo";
+
+export const metadata = legalPageMetadata("電子商務條款", "/legal/commerce");
+
+export default function CommercePage() {
+  return <LegalStub title="電子商務條款" />;
+}

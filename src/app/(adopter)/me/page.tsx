@@ -1,6 +1,14 @@
 import { LogoutButton } from "@/components/logout-button";
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "我的生活準備",
+  description: "個人生活準備與偏好設定。",
+  path: "/me",
+  robots: noIndexRobots,
+});
 
 export default function MePage() {
   return (

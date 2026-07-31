@@ -16,6 +16,7 @@ export interface AdminPetListFilters {
   publicationStatus?: PetSourcePublicationStatus;
   isPublished?: boolean;
   q?: string;
+  region?: string;
   limit?: number;
   offset?: number;
 }
@@ -47,12 +48,30 @@ export async function listAdminPets(supabase: SupabaseClient, filters: AdminPetL
   if (filters.publicationStatus) {
     query = query.eq("pet_source_records.publication_status", filters.publicationStatus);
   }
+  if (filters.region?.trim()) {
+    query = query.eq("region", filters.region.trim());
+  }
   if (filters.q?.trim()) {
     const q = filters.q.trim().replaceAll(",", " ");
     query = query.or(`name.ilike.%${q}%,region.ilike.%${q}%`);
   }
 
   return query;
+}
+
+export async function listAdminPetRegions(supabase: SupabaseClient): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("pets")
+    .select("region")
+    .not("region", "is", null);
+
+  if (error || !data) return [];
+
+  return [...new Set(
+    data
+      .map((row) => (typeof row.region === "string" ? row.region.trim() : ""))
+      .filter((region) => region.length > 0),
+  )].sort((a, b) => a.localeCompare(b, "zh-Hant"));
 }
 
 export async function getAdminPet(supabase: SupabaseClient, id: string) {

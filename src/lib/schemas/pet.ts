@@ -65,6 +65,7 @@ export const adminPetListQuerySchema = z.object({
     .optional()
     .transform((value) => (value === undefined ? undefined : value === "true")),
   q: z.string().trim().max(100).optional(),
+  region: z.string().trim().max(80).optional(),
 });
 
 export const adminPetPageQuerySchema = adminPetListQuerySchema.extend({

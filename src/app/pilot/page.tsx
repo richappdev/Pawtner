@@ -1,4 +1,12 @@
 import { Card } from "@/components/ui/card";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "試營運上線清單",
+  description: "Pawtner 封閉試營運內部檢查清單。",
+  path: "/pilot",
+  robots: noIndexRobots,
+});
 
 const items = [
   "確認邀請、登入與角色權限",

@@ -3,6 +3,14 @@ import { redirect } from "next/navigation";
 
 import { AuthForm } from "@/components/auth-form";
 import { getSessionActor } from "@/lib/auth/session-actor";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "登入",
+  description: "登入 Pawtner，繼續整理收藏、生活偏好與領養申請。",
+  path: "/login",
+  robots: noIndexRobots,
+});
 
 export default async function LoginPage() {
   const session = await getSessionActor();

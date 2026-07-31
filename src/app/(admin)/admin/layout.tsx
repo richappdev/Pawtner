@@ -1,9 +1,15 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminNav } from "@/components/nav/admin-nav";
 import { canAccessAdmin } from "@/lib/auth/permissions";
 import { getSessionActor } from "@/lib/auth/session-actor";
+import { noIndexRobots } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  robots: noIndexRobots,
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionActor();

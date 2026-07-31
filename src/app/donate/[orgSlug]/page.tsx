@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -5,7 +6,35 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getActiveDonationDestination } from "@/lib/donations/active";
+import { pageMetadata, truncateDescription } from "@/lib/seo";
 import { createServiceClient } from "@/lib/supabase/server";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ orgSlug: string }>;
+}): Promise<Metadata> {
+  const { orgSlug } = await params;
+  const result = await getActiveDonationDestination(createServiceClient(), orgSlug).catch(() => null);
+  if (!result?.data) {
+    return pageMetadata({
+      title: "組織捐款導流",
+      description: "導向已確認勸募許可的合作組織官方捐款頁。",
+      path: `/donate/${orgSlug}`,
+      robots: { index: false, follow: false },
+    });
+  }
+
+  const { organization, authorization } = result.data;
+  return pageMetadata({
+    title: `${organization.name}｜合法勸募導流`,
+    description: truncateDescription(
+      organization.description
+        ?? `前往 ${organization.name} 的官方捐款頁（${authorization.project_name}）。Pawtner 不代收款項。`,
+    ),
+    path: `/donate/${orgSlug}`,
+  });
+}
 
 export default async function DonateRedirectPage({
   params,

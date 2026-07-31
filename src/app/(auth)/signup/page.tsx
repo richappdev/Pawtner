@@ -2,6 +2,14 @@ import Link from "next/link";
 
 import { AuthForm } from "@/components/auth-form";
 import { Alert } from "@/components/ui/alert";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "註冊",
+  description: "建立 Pawtner 帳號，從生活條件與照護準備開始認識適合的毛孩。",
+  path: "/signup",
+  robots: noIndexRobots,
+});
 
 export default async function SignupPage({
   searchParams,

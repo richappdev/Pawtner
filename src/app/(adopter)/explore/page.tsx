@@ -8,6 +8,13 @@ import { searchPublicPets } from "@/lib/pets/public-data";
 import { SPECIES_LABELS } from "@/lib/pets/presentation";
 import type { PetSourceType } from "@/lib/pets/public-types";
 import type { PetSpecies } from "@/lib/schemas/pet";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "探索待認養毛孩",
+  description: "搜尋 Pawtner 中途照護與政府收容所的待認養動物，依地區、物種與資料來源認識適合的毛孩。",
+  path: "/explore",
+});
 
 export default async function ExplorePage({
   searchParams,

@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/json-ld";
 import { MediaGallery } from "@/components/pet-media";
 import { ProcessStepper } from "@/components/process-stepper";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +10,66 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verification-row";
 import { getPublicPet } from "@/lib/pets/public-data";
+import type { PublicPetDetail } from "@/lib/pets/public-types";
 import { formatAge, PET_STATUS_PRESENTATION, SEX_LABELS, SPECIES_LABELS } from "@/lib/pets/presentation";
+import { absoluteUrl, pageMetadata, truncateDescription } from "@/lib/seo";
 
 const STEPS = ["提出申請", "中途審核", "見面互動", "試養追蹤"] as const;
 
 function booleanLabel(value: boolean | null) {
   if (value === null) return "未提供";
   return value ? "是" : "否";
+}
+
+function petMetaLine(pet: PublicPetDetail): string {
+  return [
+    pet.sex ? SEX_LABELS[pet.sex] : null,
+    pet.ageMonths ? formatAge(pet.ageMonths) : pet.ageBand,
+    pet.breed,
+    pet.region,
+  ].filter(Boolean).join(" · ");
+}
+
+function petDescription(pet: PublicPetDetail): string {
+  const line = petMetaLine(pet);
+  const summary = pet.personalitySummary?.trim();
+  if (summary) {
+    return truncateDescription(line ? `${summary}（${line}）` : summary);
+  }
+  const species = SPECIES_LABELS[pet.species];
+  const region = pet.region ? `${pet.region}的` : "";
+  return truncateDescription(
+    line
+      ? `${pet.name}是等待認養的${region}${species}。${line}。在 Pawtner 認識牠的生活與適合的家。`
+      : `${pet.name}是等待認養的${region}${species}。在 Pawtner 認識牠的生活與適合的家。`,
+  );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const pet = await getPublicPet(id).catch(() => null);
+  if (!pet) {
+    return pageMetadata({
+      title: "找不到毛孩",
+      description: "這份公開認養資料不存在或已下架。",
+      path: `/pets/${id}`,
+      robots: { index: false, follow: false },
+    });
+  }
+
+  const titleBits = [SPECIES_LABELS[pet.species], pet.region].filter(Boolean).join(" · ");
+  const cover = pet.coverMedia?.url;
+
+  return pageMetadata({
+    title: `${pet.name}${titleBits ? `｜${titleBits}` : ""} 待認養`,
+    description: petDescription(pet),
+    path: `/pets/${id}`,
+    image: cover,
+  });
 }
 
 export default async function PetPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,9 +82,48 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
   const processIndex = pet.status === "trial_adoption" ? 3
     : pet.status === "reserved" ? 2
       : pet.status === "application_pending" ? 1 : 0;
+  const pageUrl = absoluteUrl(`/pets/${id}`);
+  const cover = pet.coverMedia?.url;
+  const description = petDescription(pet);
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-5 py-7 sm:px-7 sm:py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebPage",
+              name: pet.name,
+              description,
+              url: pageUrl,
+              about: {
+                "@type": "Thing",
+                name: pet.name,
+                description,
+                ...(cover ? { image: cover } : {}),
+              },
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "探索毛孩",
+                  item: absoluteUrl("/explore"),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: pet.name,
+                  item: pageUrl,
+                },
+              ],
+            },
+          ],
+        }}
+      />
       <Link href="/explore" className="text-sm font-bold text-accent">← 返回探索</Link>
       <div className="mt-6 grid gap-10 lg:grid-cols-[1.15fr_.85fr]">
         <MediaGallery media={pet.media} name={pet.name} />
@@ -44,14 +138,7 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
             </Badge>
           </div>
           <h1 className="display mt-4 text-5xl sm:text-6xl">{pet.name}</h1>
-          <p className="mt-3 text-lg text-muted">
-            {[
-              pet.sex ? SEX_LABELS[pet.sex] : null,
-              pet.ageMonths ? formatAge(pet.ageMonths) : pet.ageBand,
-              pet.breed,
-              pet.region,
-            ].filter(Boolean).join(" · ")}
-          </p>
+          <p className="mt-3 text-lg text-muted">{petMetaLine(pet)}</p>
 
           <div className="mt-6">
             {government ? (

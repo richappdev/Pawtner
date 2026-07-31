@@ -1,6 +1,14 @@
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { ProcessStepper } from "@/components/process-stepper";
 import { Card } from "@/components/ui/card";
+import { noIndexRobots, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "領養申請",
+  description: "個人領養申請進度。",
+  path: "/applications",
+  robots: noIndexRobots,
+});
 
 const STEPS = ["送出申請", "初步評估", "彼此訪談", "見面／試養"] as const;
 

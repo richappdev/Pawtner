@@ -223,6 +223,21 @@ export async function listPublicPets(limit = 48): Promise<PublicPetSummary[]> {
   return (await searchPublicPets({ limit })).items;
 }
 
+export async function listPublicPetIds(): Promise<Array<{ id: string; publishedAt: string | null }>> {
+  const supabase = createServiceClient();
+  let query = supabase
+    .from("pets_public")
+    .select("id,published_at")
+    .order("id", { ascending: false });
+  if (!getFlag("government_pets")) query = query.eq("source_type", "private_foster");
+  const { data, error } = await query;
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: string; published_at: string | null }>).map((row) => ({
+    id: row.id,
+    publishedAt: row.published_at,
+  }));
+}
+
 export async function getPublicPet(id: string): Promise<PublicPetDetail | null> {
   const supabase = createServiceClient();
   let query = supabase.from("pets_public").select(PUBLIC_SELECT).eq("id", id);

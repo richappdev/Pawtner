@@ -12,6 +12,15 @@ describe("isBlockedDirectCloudRunRequest", () => {
     ).toBe(true);
   });
 
+  it("blocks a direct hostname with an explicit port", () => {
+    expect(
+      isBlockedDirectCloudRunRequest(
+        "staging",
+        "pawtner-hosting-web-staging-pvu47vzmnq-de.a.run.app:443",
+      ),
+    ).toBe(true);
+  });
+
   it("allows the staging Firebase Hosting hostname", () => {
     expect(
       isBlockedDirectCloudRunRequest("staging", "pawtner-tw-staging.web.app"),

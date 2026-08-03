@@ -7,7 +7,7 @@ export async function proxy(request: NextRequest) {
   if (
     isBlockedDirectCloudRunRequest(
       process.env.PAWTNER_ENV,
-      request.nextUrl.hostname,
+      request.headers.get("host") ?? request.nextUrl.hostname,
     )
   ) {
     return new NextResponse("Not Found", { status: 404 });

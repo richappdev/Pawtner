@@ -2,10 +2,12 @@ const CLOUD_RUN_HOST_SUFFIX = ".run.app";
 
 export function isBlockedDirectCloudRunRequest(
   frontendEnvironment: string | undefined,
-  hostname: string,
+  host: string,
 ) {
+  const hostname = host.split(":", 1)[0]?.toLowerCase() ?? "";
+
   return (
     frontendEnvironment === "staging" &&
-    hostname.toLowerCase().endsWith(CLOUD_RUN_HOST_SUFFIX)
+    hostname.endsWith(CLOUD_RUN_HOST_SUFFIX)
   );
 }

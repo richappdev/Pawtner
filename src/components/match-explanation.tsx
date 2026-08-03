@@ -10,7 +10,9 @@ export function MatchExplanation({ result }: { result: MatchResult }) {
           <p className="eyebrow">MATCH NOTES</p>
           <h2 className="display mt-2 text-2xl">為什麼可能適合你</h2>
         </div>
-        <p className="latin-display text-4xl font-semibold text-clay">{result.score}</p>
+        <p className="latin-display text-4xl font-semibold text-clay">
+          {result.score === null ? "—" : result.score}
+        </p>
       </div>
       {result.reasons.length ? (
         <ul className="space-y-2 text-sm leading-6">

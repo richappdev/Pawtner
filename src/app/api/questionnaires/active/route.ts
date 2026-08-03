@@ -1,1 +1,1 @@
-export { GET } from "@/app/api/_handler";
+export { getActiveQuestionnaire as GET } from "@/app/api/_domains/questionnaire";

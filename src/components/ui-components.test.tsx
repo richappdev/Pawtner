@@ -36,6 +36,7 @@ describe("shared UI primitives", () => {
         result={{
           score: 82,
           eligible: true,
+          evaluatedCriteria: 4,
           reasons: ["作息接近", "可接受公寓生活"],
           risks: ["與幼童相處資料尚未完整"],
           questions: ["是否能安排每日散步？"],

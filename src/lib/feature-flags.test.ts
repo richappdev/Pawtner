@@ -25,4 +25,10 @@ describe("getFlag", () => {
 
     expect(getFlag("ai")).toBe(false);
   });
+
+  it("keeps closed-pilot adoption operations default off", () => {
+    expect(getFlag("closed_pilot_adoption_operations")).toBe(false);
+    vi.stubEnv("FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED", "true");
+    expect(getFlag("closed_pilot_adoption_operations")).toBe(true);
+  });
 });

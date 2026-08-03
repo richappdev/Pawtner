@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "node scripts/run-ui-tests.mjs",
+    "fixtures:staging": "node scripts/seed-closed-pilot-fixtures.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

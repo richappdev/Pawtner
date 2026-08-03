@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBadge } from "@/components/nav/notification-badge";
 
 const items = [
   ["探索", "Explore", "/explore", "⌕"],
@@ -37,7 +38,7 @@ export function AdopterNav({
                     active ? "bg-mint text-accent" : "text-muted hover:bg-surface hover:text-ink",
                   )}
                 >
-                  {label}<span className="sr-only"> {english}</span>
+                  {label}{href === "/me" ? <NotificationBadge /> : null}<span className="sr-only"> {english}</span>
                 </Link>
               );
             })}

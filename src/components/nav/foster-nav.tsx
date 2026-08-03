@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBadge } from "@/components/nav/notification-badge";
 
 const items = [
   ["今日總覽", "/foster", "⌂"],
@@ -33,7 +34,7 @@ export function FosterNav() {
                   active ? "bg-mint text-accent" : "text-muted hover:bg-surface-soft hover:text-ink",
                 )}
               >
-                <span aria-hidden="true">{icon}</span>{label}
+                <span aria-hidden="true">{icon}</span>{label}{href === "/foster" ? <NotificationBadge /> : null}
               </Link>
             );
           })}

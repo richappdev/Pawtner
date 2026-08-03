@@ -19,6 +19,10 @@ Canonical project index: [Pawtner Project Home](https://app.notion.com/p/104a418
 
 ## Current status
 
+Closed-pilot adoption operations are implemented behind default-off application and database flags.
+See [the rollout runbook](docs/closed-pilot-adoption-operations.md) for migration order, staging fixtures,
+role acceptance, safe observability, and flag-only rollback.
+
 Reviewed on **2026-08-03** against synchronized `main` commit `a4eb6be` plus the current worktree:
 
 - Firebase Hosting serves the production site through the independent Cloud Run service.

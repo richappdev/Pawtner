@@ -45,6 +45,21 @@ describe("scoreMatch", () => {
     );
 
     expect(Object.values(result.breakdown).every((value) => value >= 0 && value <= 100)).toBe(true);
-    expect(result.score).toBe(75);
+    expect(result.score).toBe(0);
+    expect(result.evaluatedCriteria).toBe(1);
+  });
+
+  it("returns a null score when the pet has no usable matching evidence", () => {
+    const result = scoreMatch(
+      { mustHave: [] },
+      { supportedMustHaves: [] },
+    );
+
+    expect(result).toMatchObject({
+      score: null,
+      eligible: true,
+      evaluatedCriteria: 0,
+      breakdown: {},
+    });
   });
 });

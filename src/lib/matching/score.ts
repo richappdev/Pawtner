@@ -39,8 +39,9 @@ export interface AdopterMatchInput {
 }
 
 export interface MatchResult {
-  score: number;
+  score: number | null;
   eligible: boolean;
+  evaluatedCriteria: number;
   reasons: string[];
   risks: string[];
   questions: string[];
@@ -57,6 +58,7 @@ const WEIGHTS = {
 
 interface CategoryResult {
   score: number;
+  evaluatedCriteria: number;
   reasons: string[];
   risks: string[];
   questions: string[];
@@ -75,6 +77,7 @@ function categoryResult(
 ): CategoryResult {
   return {
     score: percentage(checks.map((check) => check.passes)),
+    evaluatedCriteria: checks.length,
     reasons: checks.filter((check) => check.passes).map((check) => check.success),
     risks: checks.filter((check) => !check.passes).map((check) => check.risk),
     questions: checks.filter((check) => !check.passes && check.question).flatMap((check) => check.question ?? []),
@@ -85,6 +88,7 @@ export function scoreMatch(pet: PetMatchInput, adopter: AdopterMatchInput): Matc
   const missingMustHaves = pet.mustHave.filter((requirement) => !adopter.supportedMustHaves.includes(requirement));
   const mustHave: CategoryResult = {
     score: missingMustHaves.length === 0 ? 100 : 0,
+    evaluatedCriteria: pet.mustHave.length,
     reasons: missingMustHaves.length === 0
       ? ["All non-negotiable requirements are supported."]
       : [],
@@ -175,18 +179,28 @@ export function scoreMatch(pet: PetMatchInput, adopter: AdopterMatchInput): Matc
   ]);
 
   const categories = { mustHave, home, time, care, personality };
-  const breakdown = Object.fromEntries(
-    Object.entries(categories).map(([name, category]) => [name, category.score]),
+  const evaluatedCategories = Object.entries(categories).filter(
+    ([, category]) => category.evaluatedCriteria > 0,
   );
+  const breakdown = Object.fromEntries(evaluatedCategories.map(([name, category]) => [name, category.score]));
   const eligible = missingMustHaves.length === 0;
-  const weightedScore = Object.entries(WEIGHTS).reduce(
-    (total, [name, weight]) => total + categories[name as keyof typeof categories].score * (weight / 100),
+  const evaluatedWeight = evaluatedCategories.reduce(
+    (total, [name]) => total + WEIGHTS[name as keyof typeof WEIGHTS],
+    0,
+  );
+  const weightedScore = evaluatedCategories.reduce(
+    (total, [name, category]) => total + category.score * WEIGHTS[name as keyof typeof WEIGHTS],
+    0,
+  );
+  const evaluatedCriteria = Object.values(categories).reduce(
+    (total, category) => total + category.evaluatedCriteria,
     0,
   );
 
   return {
-    score: eligible ? Math.round(weightedScore) : 0,
+    score: evaluatedWeight === 0 ? null : eligible ? Math.round(weightedScore / evaluatedWeight) : 0,
     eligible,
+    evaluatedCriteria,
     reasons: Object.values(categories).flatMap((category) => category.reasons),
     risks: Object.values(categories).flatMap((category) => category.risks),
     questions: Object.values(categories).flatMap((category) => category.questions),

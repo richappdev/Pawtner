@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import {
   PetViewAnalytics,
   TrackedLeadAnchor,
-  TrackedLeadLink,
 } from "@/components/adoption-analytics";
+import { ApplicationSubmitButton } from "@/components/adoption/application-submit-button";
 import { JsonLd } from "@/components/json-ld";
 import { MediaGallery } from "@/components/pet-media";
 import { ProcessStepper } from "@/components/process-stepper";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verification-row";
 import { getPublicPet } from "@/lib/pets/public-data";
+import { getFlag } from "@/lib/feature-flags";
 import type { PublicPetDetail } from "@/lib/pets/public-types";
 import { formatAge, PET_STATUS_PRESENTATION, SEX_LABELS, SPECIES_LABELS } from "@/lib/pets/presentation";
 import { absoluteUrl, pageMetadata, truncateDescription } from "@/lib/seo";
@@ -83,6 +84,7 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
   const status = PET_STATUS_PRESENTATION[pet.status];
   const shelterAction = pet.adoptionAction.kind === "shelter_contact" ? pet.adoptionAction : null;
   const government = shelterAction !== null;
+  const adoptionOperationsEnabled = getFlag("closed_pilot_adoption_operations");
   const processIndex = pet.status === "trial_adoption" ? 3
     : pet.status === "reserved" ? 2
       : pet.status === "application_pending" ? 1 : 0;
@@ -199,15 +201,7 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
                 <p className="eyebrow">BEFORE YOU APPLY</p>
                 <p className="mt-2 font-bold">{status.description}</p>
               </Card>
-              <TrackedLeadLink
-                pet={analyticsPet}
-                leadType="pawtner_application"
-                href="/login"
-                size="lg"
-                className="mt-6 w-full"
-              >
-                登入並提出認養申請
-              </TrackedLeadLink>
+              {adoptionOperationsEnabled ? <ApplicationSubmitButton petId={pet.id} /> : null}
             </>
           )}
         </section>

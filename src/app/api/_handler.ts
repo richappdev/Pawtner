@@ -4,7 +4,7 @@ import { z } from "zod";
 import { runAiPipeline } from "@/lib/ai/pipeline";
 import { renderDeterministicDraft } from "@/lib/ai/templates";
 import { writeAuditLog } from "@/lib/audit";
-import { canAccessAdmin, canApproveAi, canManagePet, canReviewFoster } from "@/lib/auth/permissions";
+import { canAccessAdmin, canApproveAi, canManagePet } from "@/lib/auth/permissions";
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
 import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
@@ -12,7 +12,6 @@ import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/ma
 import { runAdminPetBulkAction } from "@/lib/pets/admin-bulk";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
 import { getPublicPet, searchPublicPets } from "@/lib/pets/public-data";
-import { applicationStatusTransitionSchema } from "@/lib/schemas/application";
 import { aiGenerateRequestSchema, aiReviewRequestSchema } from "@/lib/schemas/ai";
 import {
   adminPetBulkActionSchema,
@@ -37,7 +36,6 @@ type Db = SupabaseClient;
 async function publicDb() {
   return serviceClient();
 }
-
 export async function GET(request: Request) {
   const path = pathname(request);
 
@@ -105,29 +103,6 @@ export async function GET(request: Request) {
     const { data, error } = await auth.supabase.from("user_profiles").select("*").eq("id", auth.user.id).single();
     return failed(error) ?? jsonOk(data);
   }
-  if (path === "/api/favorites") {
-    const { data, error } = await auth.supabase
-      .from("favorites")
-      .select("id,user_id,pet_id,created_at")
-      .eq("user_id", auth.user.id);
-    if (error) return jsonError(error.message, 500);
-    const favorites = await Promise.all(
-      (data ?? []).map(async (item) => ({ ...item, pets: await getPublicPet(item.pet_id) })),
-    );
-    return jsonOk(favorites);
-  }
-  if (path === "/api/applications" || path.startsWith("/api/applications/")) {
-    const id = path === "/api/applications" ? undefined : segmentId(request, "applications");
-    const query = auth.supabase.from("adoption_applications").select("*, application_status_history(*)");
-    const { data, error } = id
-      ? await query.eq("id", id).maybeSingle()
-      : await query.eq("adopter_user_id", auth.user.id);
-    return failed(error) ?? (id && !data ? jsonError("Application not found.", 404) : jsonOk(data));
-  }
-  if (path === "/api/questionnaires/active") {
-    const { data, error } = await auth.supabase.from("questionnaires").select("*").eq("is_active", true);
-    return failed(error) ?? jsonOk(data ?? []);
-  }
   if (path === "/api/foster/pets" || path.startsWith("/api/foster/pets/")) {
     const { data: profile, error: profileError } = await auth.supabase
       .from("foster_profiles")
@@ -163,14 +138,6 @@ export async function GET(request: Request) {
       .select("*")
       .order("created_at", { ascending: false });
     return failed(error) ?? jsonOk(data ?? []);
-  }
-  if (path.startsWith("/api/admin/fosters/") && canReviewFoster(actor.actor, {})) {
-    const { data, error } = await actor.supabase
-      .from("foster_profiles")
-      .select("*")
-      .eq("id", segmentId(request, "fosters"))
-      .maybeSingle();
-    return failed(error) ?? (data ? jsonOk(data) : jsonError("Foster profile not found.", 404));
   }
   if (path === "/api/admin/flags" && canAccessAdmin(actor.actor)) {
     const { data, error } = await actor.supabase.from("feature_flags").select("*");
@@ -249,16 +216,6 @@ export async function POST(request: Request) {
   }
   const auth = await requireUser(request);
   if ("response" in auth) return auth.response;
-  if (path === "/api/favorites") {
-    const body = await parseJson(request, z.object({ petId: uuid }));
-    if ("response" in body) return body.response;
-    const { data, error } = await auth.supabase
-      .from("favorites")
-      .upsert({ user_id: auth.user.id, pet_id: body.data.petId }, { onConflict: "user_id,pet_id" })
-      .select()
-      .single();
-    return failed(error) ?? jsonOk(data, { status: 201 });
-  }
   if (path === "/api/matching/score") {
     const body = await parseJson(
       request,
@@ -386,40 +343,6 @@ export async function POST(request: Request) {
       );
     }
     return jsonOk(wishlist, { status: 201 });
-  }
-  if (path === "/api/applications") {
-    const body = await parseJson(
-      request,
-      z.object({ petId: uuid, answers: record.optional(), questionnaireId: uuid.optional() }),
-    );
-    if ("response" in body) return body.response;
-    const { data: targetPet, error: targetPetError } = await auth.supabase
-      .from("pets")
-      .select("id,source_type,status,is_published,review_status")
-      .eq("id", body.data.petId)
-      .maybeSingle();
-    if (targetPetError) return jsonError(targetPetError.message, 500);
-    if (!targetPet) return jsonError("Pet not found.", 404);
-    if (targetPet.source_type !== "private_foster") {
-      return jsonError("Government pets must be adopted through the official shelter.", 409);
-    }
-    if (!targetPet.is_published || targetPet.review_status !== "approved" || targetPet.status !== "available") {
-      return jsonError("This pet is not accepting applications.", 409);
-    }
-    const { data, error } = await auth.supabase
-      .from("adoption_applications")
-      .insert({ pet_id: body.data.petId, adopter_user_id: auth.user.id, status: "submitted" })
-      .select()
-      .single();
-    if (error) return jsonError(error.message, 500);
-    if (body.data.answers && body.data.questionnaireId) {
-      await auth.supabase.from("application_answers").insert({
-        application_id: data.id,
-        questionnaire_id: body.data.questionnaireId,
-        answers: body.data.answers,
-      });
-    }
-    return jsonOk(data, { status: 201 });
   }
   if (path.startsWith("/api/foster/pets/") && path.endsWith("/submit")) {
     const id = segmentId(request, "pets");
@@ -595,7 +518,6 @@ export async function POST(request: Request) {
   }
   return jsonError("Not found.", 404);
 }
-
 export async function PATCH(request: Request) {
   const path = pathname(request);
   const actor = await requireActor(request);
@@ -710,28 +632,6 @@ export async function PATCH(request: Request) {
     }
     return jsonOk(data);
   }
-  if (path.startsWith("/api/admin/fosters/")) {
-    const body = await parseJson(
-      request,
-      z.object({
-        status: z.enum(["under_review", "need_info", "approved", "rejected", "suspended"]),
-        verificationNotes: z.string().trim().max(5_000).optional(),
-      }),
-    );
-    if ("response" in body) return body.response;
-    if (!canReviewFoster(actor.actor, {})) return jsonError("Foster review permission is required.", 403);
-    const { data, error } = await actor.supabase
-      .from("foster_profiles")
-      .update({
-        status: body.data.status,
-        verification_notes: body.data.verificationNotes,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", segmentId(request, "fosters"))
-      .select()
-      .single();
-    return failed(error) ?? jsonOk(data);
-  }
   if (path === "/api/admin/reports") {
     const body = await parseJson(
       request,
@@ -755,17 +655,6 @@ export async function PATCH(request: Request) {
       .single();
     return failed(error) ?? jsonOk(data);
   }
-  if (path.startsWith("/api/applications/")) {
-    const body = await parseJson(request, applicationStatusTransitionSchema);
-    if ("response" in body) return body.response;
-    const id = segmentId(request, "applications");
-    const { data, error } = await actor.supabase.rpc("transition_application", {
-      p_application_id: id,
-      p_status: body.data.status,
-      p_note: body.data.note ?? null,
-    });
-    return error ? jsonError("Invalid or unauthorized application transition.", 409) : jsonOk(data);
-  }
   if (path.includes("/ai/") && path.endsWith("/approve")) {
     const body = await parseJson(request, aiReviewRequestSchema);
     if ("response" in body) return body.response;
@@ -783,19 +672,4 @@ export async function PATCH(request: Request) {
     return failed(error) ?? jsonOk(data);
   }
   return jsonError("Not found.", 404);
-}
-
-export async function DELETE(request: Request) {
-  const auth = await requireUser(request);
-  if ("response" in auth) return auth.response;
-  const petId = new URL(request.url).searchParams.get("petId");
-  if (!petId || !uuid.safeParse(petId).success) {
-    return jsonError("A valid petId query parameter is required.", 422);
-  }
-  const { error } = await auth.supabase
-    .from("favorites")
-    .delete()
-    .eq("user_id", auth.user.id)
-    .eq("pet_id", petId);
-  return failed(error) ?? jsonOk({ deleted: true });
 }

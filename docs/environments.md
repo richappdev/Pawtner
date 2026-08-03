@@ -26,9 +26,9 @@ synthetic role fixtures, and Next.js. Docker must be available for Supabase.
   authorization policies. A write made through staging is a production write.
 - The staging Hosting site routes `/api/**` to the production Cloud Run service;
   only page rendering and static assets use the staging revision. The staging
-  service accepts ingress required by Firebase Hosting, while the application
-  rejects requests whose public hostname is the direct `run.app` address and
-  disables every `/api/**` route on the staging service itself.
+  service accepts the public ingress required by Firebase Hosting. Its direct
+  `run.app` URL is unsupported and may render the frontend shell, but the
+  application disables every `/api/**` route on the staging service itself.
 - Database feature flags are inherently shared. A staging application flag may
   expose unfinished UI while the database flag remains off, but it must not be
   treated as permission to run mutating acceptance tests.

@@ -98,15 +98,15 @@ env:
       - BUILD
       - RUNTIME
 
-  # Populate after enabling GA4 for the web app; these values are public.
+  # Firebase web Analytics configuration; these values are public.
   - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-    value: ""
+    value: "G-M1XR7TSR2E"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_OBSERVABILITY_ENABLED
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME

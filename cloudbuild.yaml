@@ -29,9 +29,8 @@ images:
 
 substitutions:
   _IMAGE_TAG: latest
-  # Override after GA4 is enabled for the Firebase web app.
-  _FIREBASE_MEASUREMENT_ID: ""
-  _FIREBASE_OBSERVABILITY_ENABLED: "false"
+  _FIREBASE_MEASUREMENT_ID: "G-M1XR7TSR2E"
+  _FIREBASE_OBSERVABILITY_ENABLED: "true"
 
 availableSecrets:
   secretManager:

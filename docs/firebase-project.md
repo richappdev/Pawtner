@@ -30,7 +30,7 @@ appId: 1:611592714843:web:b10424774e91a6ff9add7e
 authDomain: pawtner-app-2026.firebaseapp.com
 messagingSenderId: 611592714843
 storageBucket: pawtner-app-2026.firebasestorage.app
-measurementId: set after enabling Google Analytics for the web app
+measurementId: G-M1XR7TSR2E
 ```
 
 API keys and Admin SDK credentials live in Secret Manager / local `.env.local` — **never commit them**.

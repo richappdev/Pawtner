@@ -15,7 +15,7 @@ The migration is additive. Disabling either control stops new operational writes
 4. Enable the application flag in the staging frontend while leaving the shared production database flag off. Verify rendering, navigation, loading, empty, forbidden, and conflict states without submitting mutations.
 5. Run complete adopter, approved-foster, pending-foster, and staff role journeys against the isolated local stack. Confirm government pets expose only the official-shelter action.
 6. Locally disable the database flag and verify writes fail without removing existing records. Re-enable it only for continued local acceptance.
-7. For production, keep the database flag and production application flag off until the invited cohort and support owner are approved. Enabling the shared database flag makes mutations available through both cloud frontends.
+7. The shared production application/API flag was approved and enabled on 2026-08-03 so both cloud frontends can load the operational APIs. Keep the database flag off until an invited cohort and support owner are approved. Enabling the shared database flag makes lifecycle RPC mutations available through both cloud frontends.
 
 ## Acceptance evidence
 

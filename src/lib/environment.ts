@@ -1,9 +1,5 @@
-export const PRODUCTION_FIREBASE_PROJECT_ID = "pawtner-app-2026";
-export const PRODUCTION_SUPABASE_PROJECT_REF = "rlwctljjjvlxrexcgqmg";
-export const STAGING_FIREBASE_PROJECT_IDS = [
-  "pawtner-staging-2026",
-  "pawtner-stg-714843",
-] as const;
+export const SHARED_FIREBASE_PROJECT_ID = "pawtner-app-2026";
+export const SHARED_SUPABASE_PROJECT_REF = "rlwctljjjvlxrexcgqmg";
 
 export type PawtnerEnvironment = "local" | "staging" | "production";
 
@@ -54,38 +50,29 @@ export function validateEnvironment(input: EnvironmentInput = process.env) {
     required(input, "NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST");
   }
 
-  if (environment === "staging") {
-    if (firebaseProjectId === PRODUCTION_FIREBASE_PROJECT_ID) {
-      throw new Error("Staging cannot use the production Firebase project");
+  if (environment === "staging" || environment === "production") {
+    if (firebaseProjectId !== SHARED_FIREBASE_PROJECT_ID) {
+      throw new Error(`${environment} frontend must use the approved shared Firebase backend`);
     }
-    if (!(STAGING_FIREBASE_PROJECT_IDS as readonly string[]).includes(firebaseProjectId)) {
-      throw new Error("Staging Firebase project is not in the approved project allowlist");
-    }
-    if (!projectRef || projectRef === PRODUCTION_SUPABASE_PROJECT_REF) {
-      throw new Error("Staging must use an isolated hosted Supabase branch");
-    }
-    const expectedRef = required(input, "PAWTNER_STAGING_SUPABASE_PROJECT_REF");
-    if (projectRef !== expectedRef) {
-      throw new Error("Staging Supabase URL does not match PAWTNER_STAGING_SUPABASE_PROJECT_REF");
+    if (projectRef !== SHARED_SUPABASE_PROJECT_REF) {
+      throw new Error(`${environment} frontend must use the approved shared Supabase backend`);
     }
   }
 
-  if (environment === "production") {
-    if (firebaseProjectId !== PRODUCTION_FIREBASE_PROJECT_ID) {
-      throw new Error("Production must use the approved Firebase project");
-    }
-    if (projectRef !== PRODUCTION_SUPABASE_PROJECT_REF) {
-      throw new Error("Production must use the approved Supabase project");
-    }
-  }
-
-  return { environment, firebaseProjectId, supabaseUrl, supabaseProjectRef: projectRef };
+  return {
+    environment,
+    backendEnvironment: environment === "local" ? "local" : "production",
+    firebaseProjectId,
+    supabaseUrl,
+    supabaseProjectRef: projectRef,
+  };
 }
 
 export function deploymentMetadata(input: EnvironmentInput = process.env) {
   const validated = validateEnvironment(input);
   return {
     environment: validated.environment,
+    backendEnvironment: validated.backendEnvironment,
     commitSha: input.PAWTNER_COMMIT_SHA?.trim() || "unknown",
     imageDigest: input.PAWTNER_IMAGE_DIGEST?.trim() || "unknown",
   };

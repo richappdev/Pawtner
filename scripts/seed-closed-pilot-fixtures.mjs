@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
+import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 const environment = process.env.PAWTNER_ENV;
@@ -7,41 +7,26 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const password = process.env.STAGING_FIXTURE_PASSWORD;
 const firebaseProjectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const productionSupabaseRef = "rlwctljjjvlxrexcgqmg";
-const approvedStagingProjects = new Set(["pawtner-staging-2026", "pawtner-stg-714843"]);
 
-if (environment !== "local" && environment !== "staging") {
-  throw new Error("Closed-pilot fixtures run only with PAWTNER_ENV=local or PAWTNER_ENV=staging.");
+if (environment !== "local") {
+  throw new Error("Closed-pilot fixtures run only with PAWTNER_ENV=local.");
 }
 if (!url || !key || !password || password.length < 12 || !firebaseProjectId) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and a 12+ character STAGING_FIXTURE_PASSWORD are required.");
 }
 const supabaseHost = new URL(url).hostname;
-const hostedRef = supabaseHost.match(/^([a-z0-9]+)\.supabase\.co$/)?.[1];
-if (hostedRef === productionSupabaseRef || firebaseProjectId === "pawtner-app-2026") {
+if (supabaseHost.endsWith(".supabase.co") || firebaseProjectId === "pawtner-app-2026") {
   throw new Error("Refusing to install synthetic fixtures in production.");
 }
-if (environment === "staging") {
-  const expectedRef = process.env.PAWTNER_STAGING_SUPABASE_PROJECT_REF;
-  if (!hostedRef || hostedRef !== expectedRef || !approvedStagingProjects.has(firebaseProjectId)) {
-    throw new Error("Staging fixture identifiers do not match the approved isolated environment.");
-  }
+if (!["127.0.0.1", "localhost"].includes(supabaseHost) || firebaseProjectId !== "pawtner-local") {
+  throw new Error("Local fixtures must use local Supabase and the pawtner-local Firebase emulator.");
 }
-if (environment === "local") {
-  if (!["127.0.0.1", "localhost"].includes(supabaseHost) || firebaseProjectId !== "pawtner-local") {
-    throw new Error("Local fixtures must use local Supabase and the pawtner-local Firebase emulator.");
-  }
-  if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-    throw new Error("FIREBASE_AUTH_EMULATOR_HOST is required for local fixtures.");
-  }
+if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+  throw new Error("FIREBASE_AUTH_EMULATOR_HOST is required for local fixtures.");
 }
 
 const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-const firebaseApp = getApps()[0] ?? initializeApp(
-  environment === "staging"
-    ? { projectId: firebaseProjectId, credential: applicationDefault() }
-    : { projectId: firebaseProjectId },
-);
+const firebaseApp = getApps()[0] ?? initializeApp({ projectId: firebaseProjectId });
 const firebaseAuth = getAuth(firebaseApp);
 const people = [
   ["admin", "pilot-admin@pawtner.invalid", "Pilot Admin"],

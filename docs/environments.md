@@ -2,68 +2,71 @@
 
 ## Environment contract
 
-Pawtner has three isolated tiers. `PAWTNER_ENV` and `NEXT_PUBLIC_PAWTNER_ENV`
-must match, and startup rejects production resource identifiers in staging or
-local processes.
+Pawtner has a local development environment and two frontend deployment tiers.
+`PAWTNER_ENV` and `NEXT_PUBLIC_PAWTNER_ENV` identify the frontend tier and must
+match. The staging and production frontends deliberately share the existing
+production Firebase and Supabase backend.
 
-| Tier | Git source | Firebase/GCP | Supabase | Adoption operations |
+| Tier | Git source | Frontend deployment | Firebase/Auth backend | Supabase backend |
 | --- | --- | --- | --- | --- |
-| Local | working tree | Auth emulator (`pawtner-local`) | Supabase CLI | enabled |
-| Staging | `develop` | `pawtner-staging-2026` | persistent data-less `staging` branch | enabled |
-| Production | `main` | `pawtner-app-2026` | `rlwctljjjvlxrexcgqmg` | default-off |
+| Local | working tree | Next.js locally | Auth emulator (`pawtner-local`) | Supabase CLI |
+| Staging frontend | `develop` | `pawtner-tw-staging` → `pawtner-hosting-web-staging` | `pawtner-app-2026` | `rlwctljjjvlxrexcgqmg` |
+| Production frontend | `main` | `pawtner-tw` → `pawtner-hosting-web` | `pawtner-app-2026` | `rlwctljjjvlxrexcgqmg` |
 
 Use `npm run dev:local` for a clean local database, Firebase Auth emulator,
 synthetic role fixtures, and Next.js. Docker must be available for Supabase.
 
-## One-time staging provisioning
+## Shared-backend safety rules
 
-1. Confirm Supabase Branching entitlement and obtain explicit approval for any
-   new recurring cost. Create the branch only after approval:
+- Staging never applies database migrations. Reviewed migrations are applied
+  only by the approval-gated production workflow.
+- Staging never installs synthetic fixtures. The fixture script accepts only
+  local emulator endpoints and refuses every hosted Supabase project.
+- Staging and production use the same users, records, files, feature flags, and
+  authorization policies. A write made through staging is a production write.
+- The staging Hosting site routes `/api/**` to the production Cloud Run service;
+  only page rendering and static assets use the staging revision. The staging
+  service accepts ingress required by Firebase Hosting, while the application
+  rejects requests whose public hostname is the direct `run.app` address.
+- Database feature flags are inherently shared. A staging application flag may
+  expose unfinished UI while the database flag remains off, but it must not be
+  treated as permission to run mutating acceptance tests.
+- The operations status endpoint reports both the frontend environment and the
+  effective backend environment so the shared boundary is visible.
 
-   `npx supabase branches create staging --project-ref rlwctljjjvlxrexcgqmg --persistent --region ap-northeast-1 --size micro`
+This topology validates frontend builds, routing, rendering, and browser
+compatibility. It is not suitable for destructive tests, fixture-based role
+journeys, migration rehearsal, or testing backend behavior against synthetic
+cloud data; use the isolated local stack for those checks.
 
-   Do not pass `--with-data`. Record the returned branch ref as
-   `STAGING_SUPABASE_PROJECT_REF`.
-2. Create Firebase/GCP project `pawtner-staging-2026`; if unavailable use
-   `pawtner-stg-714843`. Enable Firebase Auth email/password, Hosting, Cloud Run,
-   Cloud Build, Artifact Registry, and Secret Manager. Register a Web App.
-3. Create Artifact Registry repository `pawtner-images` and runtime service
-   account `pawtner-hosting-run`. Grant only Firebase Auth Admin and access to
-   the runtime secrets used by Cloud Run.
-4. Create environment-local secrets named `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `SUPABASE_SERVICE_ROLE_KEY`, and `NEXT_PUBLIC_FIREBASE_API_KEY`.
-5. Configure GitHub `staging` and `production` environments. Require reviewers
-   on `production`; use separate Workload Identity providers/service accounts.
-6. Populate the GitHub variables and secrets listed at the top of each deploy
-   workflow. Never reuse production database keys in staging.
+## Frontend deployment
 
-### Provisioning status (August 3, 2026)
+1. Create Hosting site `pawtner-tw-staging` inside Firebase project
+   `pawtner-app-2026` and map the `staging` Hosting target to it.
+2. Deploy `develop` to Cloud Run service `pawtner-hosting-web-staging` and route
+   page requests to that service. Route `/api/**` to `pawtner-hosting-web` first.
+   Install this Hosting rewrite once with the project-owner identity; GitHub does
+   not receive project-wide Firebase Hosting Admin.
+3. Deploy `main`, after GitHub production-environment approval, to the existing
+   `pawtner-hosting-web` service and `pawtner-tw` Hosting site.
+4. Build separate immutable images from the same source when promoting because
+   Next.js embeds `NEXT_PUBLIC_*` values during `next build`.
+5. Roll staging back by restoring its previous Cloud Run revision. Production
+   retains its existing Cloud Run and Firebase Hosting release rollback.
 
-- Created Firebase/GCP project and default Hosting site `pawtner-staging-2026`.
-- Registered staging Web App `1:946692082950:web:73c5c9cfb225864929e287`.
-- Created service accounts `pawtner-hosting-run` and
-  `pawtner-github-deploy` in the staging project.
-- Created repository-scoped Workload Identity provider
-  `projects/946692082950/locations/global/workloadIdentityPools/github/providers/pawtner-github`.
-- Pending explicit financial approval: link billing account, initialize Firebase
-  Auth, and enable/provision Cloud Run, Cloud Build, Artifact Registry, and
-  Secret Manager.
-- Pending Supabase organization upgrade: the `Rich` organization is on Free;
-  persistent branches require Pro. The confirmed branch compute quote is
-  US$0.01344/hour, excluding other usage.
-- Do not grant GitHub broad project-wide roles. After resources exist, scope
-  deploy/runtime permissions to the named service, repository, Hosting site,
-  and individual secrets wherever the service supports resource-level IAM.
+The previously created `pawtner-staging-2026` GCP/Firebase project is no longer
+part of this design. It is intentionally not deleted automatically; remove or
+archive it separately only after confirming nothing else uses it.
 
 ## Promotion
 
 - Feature pull requests target `develop`.
-- A successful `develop` push migrates, seeds, builds, and deploys staging.
+- A successful `develop` push builds and deploys only the staging frontend.
 - Release pull requests merge `develop` into `main`.
-- `main` passes the release gate and builds an environment-specific image.
+- `main` passes the release gate and builds a production frontend image.
 - The production deployment waits for GitHub Environment approval before
-  migrations or traffic changes.
+  applying reviewed migrations or changing production traffic.
 
-Database migrations are forward-only and additive during promotion. Roll back
-the application with the previous Cloud Run revision and Firebase Hosting
-release; correct database problems with a reviewed forward migration.
+Database migrations remain forward-only. Roll back either frontend with its
+previous Cloud Run revision and Firebase Hosting release; correct database
+problems with a reviewed forward migration.

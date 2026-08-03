@@ -11,11 +11,11 @@ The migration is additive. Disabling either control stops new operational writes
 
 1. Apply `20260803052801_closed_pilot_adoption_operations.sql`. Confirm the database flag remains `false`.
 2. Deploy the web application with `FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED=false`.
-3. In staging only, run `npm run fixtures:staging` with `PAWTNER_ENV=staging`, the staging Supabase service key, and a protected `STAGING_FIXTURE_PASSWORD`.
-4. Enable the application flag in staging, then enable the database flag.
-5. Run adopter, approved-foster, pending-foster, and staff acceptance. Confirm government pets expose only the official-shelter action.
-6. Disable the database flag and verify writes fail without removing existing records. Re-enable it only after the rollback rehearsal succeeds.
-7. For production, keep both controls off until the invited cohort and support owner are approved. Enable only for the invitation-backed cohort.
+3. Run synthetic fixtures only against the local emulators with `npm run fixtures:local`. Cloud staging shares the production backend and refuses fixture installation.
+4. Enable the application flag in the staging frontend while leaving the shared production database flag off. Verify rendering, navigation, loading, empty, forbidden, and conflict states without submitting mutations.
+5. Run complete adopter, approved-foster, pending-foster, and staff role journeys against the isolated local stack. Confirm government pets expose only the official-shelter action.
+6. Locally disable the database flag and verify writes fail without removing existing records. Re-enable it only for continued local acceptance.
+7. For production, keep the database flag and production application flag off until the invited cohort and support owner are approved. Enabling the shared database flag makes mutations available through both cloud frontends.
 
 ## Acceptance evidence
 

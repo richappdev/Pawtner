@@ -22,35 +22,36 @@ describe("validateEnvironment", () => {
     }).environment).toBe("local");
   });
 
-  it("accepts the approved production configuration", () => {
-    expect(validateEnvironment({
-      ...shared,
-      PAWTNER_ENV: "production",
-      NEXT_PUBLIC_PAWTNER_ENV: "production",
-      NEXT_PUBLIC_SUPABASE_URL: "https://rlwctljjjvlxrexcgqmg.supabase.co",
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-app-2026",
-    }).environment).toBe("production");
-  });
+  it.each(["staging", "production"] as const)(
+    "accepts the %s frontend with the shared production backend",
+    (environment) => {
+      expect(validateEnvironment({
+        ...shared,
+        PAWTNER_ENV: environment,
+        NEXT_PUBLIC_PAWTNER_ENV: environment,
+        NEXT_PUBLIC_SUPABASE_URL: "https://rlwctljjjvlxrexcgqmg.supabase.co",
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-app-2026",
+      })).toMatchObject({ environment, backendEnvironment: "production" });
+    },
+  );
 
-  it("rejects production resources in staging", () => {
+  it("rejects an unapproved Firebase backend for staging", () => {
     expect(() => validateEnvironment({
       ...shared,
       PAWTNER_ENV: "staging",
       NEXT_PUBLIC_PAWTNER_ENV: "staging",
       NEXT_PUBLIC_SUPABASE_URL: "https://rlwctljjjvlxrexcgqmg.supabase.co",
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-app-2026",
-      PAWTNER_STAGING_SUPABASE_PROJECT_REF: "stagingref",
-    })).toThrow(/production Firebase/);
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-staging-2026",
+    })).toThrow(/shared Firebase backend/);
   });
 
-  it("rejects mismatched staging branch identifiers", () => {
+  it("rejects an unapproved Supabase backend for staging", () => {
     expect(() => validateEnvironment({
       ...shared,
       PAWTNER_ENV: "staging",
       NEXT_PUBLIC_PAWTNER_ENV: "staging",
       NEXT_PUBLIC_SUPABASE_URL: "https://actualbranch.supabase.co",
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-staging-2026",
-      PAWTNER_STAGING_SUPABASE_PROJECT_REF: "expectedbranch",
-    })).toThrow(/does not match/);
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-app-2026",
+    })).toThrow(/shared Supabase backend/);
   });
 });

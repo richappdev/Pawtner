@@ -2,20 +2,16 @@
   "projects": {
     "default": "pawtner-app-2026",
     "production": "pawtner-app-2026",
-    "staging": "pawtner-staging-2026"
+    "staging": "pawtner-app-2026"
   },
   "targets": {
     "pawtner-app-2026": {
       "hosting": {
         "production": [
           "pawtner-tw"
-        ]
-      }
-    },
-    "pawtner-staging-2026": {
-      "hosting": {
+        ],
         "staging": [
-          "pawtner-staging-2026"
+          "pawtner-tw-staging"
         ]
       }
     }

@@ -11,7 +11,6 @@ steps:
           --tag "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPOSITORY}/${_SERVICE_NAME}:${_IMAGE_TAG}" \
           --build-arg PAWTNER_ENV="${_PAWTNER_ENV}" \
           --build-arg NEXT_PUBLIC_PAWTNER_ENV="${_PAWTNER_ENV}" \
-          --build-arg PAWTNER_STAGING_SUPABASE_PROJECT_REF="${_STAGING_SUPABASE_PROJECT_REF}" \
           --build-arg PAWTNER_COMMIT_SHA="${_IMAGE_TAG}" \
           --build-arg NEXT_PUBLIC_SUPABASE_URL="${_SUPABASE_URL}" \
           --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
@@ -39,7 +38,6 @@ substitutions:
   _SERVICE_NAME: pawtner-hosting-web
   _IMAGE_TAG: latest
   _PAWTNER_ENV: local
-  _STAGING_SUPABASE_PROJECT_REF: ""
   _SUPABASE_URL: http://127.0.0.1:54321
   _FIREBASE_AUTH_DOMAIN: pawtner-local.firebaseapp.com
   _FIREBASE_PROJECT_ID: pawtner-local

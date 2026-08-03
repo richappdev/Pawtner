@@ -98,6 +98,19 @@ env:
       - BUILD
       - RUNTIME
 
+  # Populate after enabling GA4 for the web app; these values are public.
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: ""
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_OBSERVABILITY_ENABLED
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
+
   - variable: MOA_SYNC_SECRET
     secret: MOA_SYNC_SECRET
     availability:

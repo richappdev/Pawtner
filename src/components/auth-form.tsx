@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isFirebaseAuthEnabled, isFirebaseAuthForcedForEmail } from "@/lib/auth/firebase-flags";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { trackEvent } from "@/lib/firebase/observability";
 import {
   clearFirebaseIdTokenCookieClient,
   getFirebaseIdToken,
@@ -133,6 +134,7 @@ export function AuthForm({
       }
 
       logger.info("auth.login.success", { provider, mode });
+      void trackEvent(isSignup ? "sign_up" : "login", { method: provider });
       router.replace("/explore");
       router.refresh();
     } catch (error) {

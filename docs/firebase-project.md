@@ -30,6 +30,7 @@ appId: 1:611592714843:web:b10424774e91a6ff9add7e
 authDomain: pawtner-app-2026.firebaseapp.com
 messagingSenderId: 611592714843
 storageBucket: pawtner-app-2026.firebasestorage.app
+measurementId: set after enabling Google Analytics for the web app
 ```
 
 API keys and Admin SDK credentials live in Secret Manager / local `.env.local` — **never commit them**.
@@ -79,6 +80,14 @@ App Hosting rollback mapping remains in [`apphosting.yaml`](../apphosting.yaml).
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `PAYMENT_WEBHOOK_SECRET`
 - `SENTRY_DSN` (optional)
+
+## Analytics and Performance
+
+Firebase Analytics and Performance Monitoring are integrated in the web client but remain
+disabled unless `NEXT_PUBLIC_FIREBASE_OBSERVABILITY_ENABLED=true`. Analytics additionally
+requires `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`. Both SDKs start only after the visitor grants
+analytics consent in the browser. See [`firebase-observability.md`](firebase-observability.md)
+for console setup, validation, rollback, and reporting queries.
 
 Example:
 

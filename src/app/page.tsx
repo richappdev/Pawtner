@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { JsonLd } from "@/components/json-ld";
 import { PetCard } from "@/components/pet-card";
+import { PetListAnalytics } from "@/components/adoption-analytics";
 import { PetCover } from "@/components/pet-media";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -129,7 +130,8 @@ export default async function LandingPage() {
           </div>
           {pets.length ? (
             <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {pets.map((pet) => <PetCard key={pet.id} pet={pet} />)}
+              <PetListAnalytics listId="home_featured" resultCount={pets.length} />
+              {pets.map((pet) => <PetCard key={pet.id} pet={pet} listId="home_featured" />)}
             </div>
           ) : (
             <Card tone="mint" className="mt-9">

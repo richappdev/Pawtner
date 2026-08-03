@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { EmptyState, PageShell } from "@/components/page-shell";
 import { PetCard } from "@/components/pet-card";
+import { PetListAnalytics } from "@/components/adoption-analytics";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { searchPublicPets } from "@/lib/pets/public-data";
@@ -87,10 +88,20 @@ export default async function ExplorePage({
         ) : null}
       </div>
 
+      <PetListAnalytics
+        listId="explore_results"
+        resultCount={page.items.length}
+        filters={{
+          query: Boolean(filters.q),
+          species: Boolean(filters.species),
+          region: Boolean(filters.region),
+          source: Boolean(filters.source),
+        }}
+      />
       {page.items.length ? (
         <>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {page.items.map((pet) => <PetCard key={pet.id} pet={pet} />)}
+            {page.items.map((pet) => <PetCard key={pet.id} pet={pet} listId="explore_results" />)}
           </div>
           {page.nextCursor ? (
             <div className="mt-8 flex justify-center">

@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  PetViewAnalytics,
+  TrackedLeadAnchor,
+  TrackedLeadLink,
+} from "@/components/adoption-analytics";
 import { JsonLd } from "@/components/json-ld";
 import { MediaGallery } from "@/components/pet-media";
 import { ProcessStepper } from "@/components/process-stepper";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verification-row";
 import { getPublicPet } from "@/lib/pets/public-data";
@@ -85,9 +89,16 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
   const pageUrl = absoluteUrl(`/pets/${id}`);
   const cover = pet.coverMedia?.url;
   const description = petDescription(pet);
+  const analyticsPet = {
+    species: pet.species,
+    sourceType: pet.sourceType,
+    status: pet.status,
+    regionPresent: Boolean(pet.region),
+  };
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-5 py-7 sm:px-7 sm:py-10">
+      <PetViewAnalytics pet={analyticsPet} />
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -168,14 +179,16 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
                 <div><dt className="font-bold">電話</dt><dd>{pet.shelter?.phone ?? "未提供"}</dd></div>
                 <div><dt className="font-bold">地址</dt><dd>{pet.shelter?.address ?? "未提供"}</dd></div>
               </dl>
-              <a
+              <TrackedLeadAnchor
+                pet={analyticsPet}
+                leadType="shelter_contact"
                 href={shelterAction!.officialUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-accent px-5 py-2 font-bold text-white"
               >
                 前往官方認養頁
-              </a>
+              </TrackedLeadAnchor>
               <p className="mt-4 text-xs leading-5 text-muted">
                 Pawtner 僅呈現開放資料，不受理此動物的認養申請，也不代表政府背書。
               </p>
@@ -186,7 +199,15 @@ export default async function PetPage({ params }: { params: Promise<{ id: string
                 <p className="eyebrow">BEFORE YOU APPLY</p>
                 <p className="mt-2 font-bold">{status.description}</p>
               </Card>
-              <ButtonLink href="/login" size="lg" className="mt-6 w-full">登入並提出認養申請</ButtonLink>
+              <TrackedLeadLink
+                pet={analyticsPet}
+                leadType="pawtner_application"
+                href="/login"
+                size="lg"
+                className="mt-6 w-full"
+              >
+                登入並提出認養申請
+              </TrackedLeadLink>
             </>
           )}
         </section>

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { PetCover } from "@/components/pet-media";
@@ -6,8 +8,15 @@ import { Card } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verification-row";
 import { formatAge, PET_STATUS_PRESENTATION, SEX_LABELS } from "@/lib/pets/presentation";
 import type { PublicPetSummary } from "@/lib/pets/public-types";
+import { trackEvent } from "@/lib/firebase/observability";
 
-export function PetCard({ pet }: { pet: PublicPetSummary }) {
+export function PetCard({
+  pet,
+  listId = "explore_results",
+}: {
+  pet: PublicPetSummary;
+  listId?: "home_featured" | "explore_results";
+}) {
   const status = PET_STATUS_PRESENTATION[pet.status];
   const age = pet.ageMonths
     ? formatAge(pet.ageMonths)
@@ -21,7 +30,17 @@ export function PetCard({ pet }: { pet: PublicPetSummary }) {
 
   return (
     <Card interactive className="group overflow-hidden p-0">
-      <Link href={`/pets/${pet.id}`} className="block">
+      <Link
+        href={`/pets/${pet.id}`}
+        className="block"
+        onClick={() => void trackEvent("select_item", {
+          item_list_id: listId,
+          species: pet.species,
+          source_type: pet.sourceType,
+          status: pet.status,
+          region_present: Boolean(pet.region),
+        })}
+      >
         <div className="relative">
           <PetCover media={pet.coverMedia} name={pet.name} className="aspect-square" />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">

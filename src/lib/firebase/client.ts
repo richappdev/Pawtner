@@ -20,6 +20,7 @@ export function getFirebaseWebConfig() {
     appId: required(process.env.NEXT_PUBLIC_FIREBASE_APP_ID, "NEXT_PUBLIC_FIREBASE_APP_ID"),
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "611592714843",
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 }
 

@@ -1,13 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isBlockedDirectCloudRunRequest } from "@/lib/hosting";
+import {
+  isBlockedDirectCloudRunRequest,
+  isBlockedStagingApiRequest,
+} from "@/lib/hosting";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
   if (
+    isBlockedStagingApiRequest(
+      process.env.PAWTNER_ENV,
+      request.nextUrl.pathname,
+    ) ||
     isBlockedDirectCloudRunRequest(
       process.env.PAWTNER_ENV,
       request.headers.get("host") ?? request.nextUrl.hostname,
+      request.headers.get("x-fh-requested-host"),
     )
   ) {
     return new NextResponse("Not Found", { status: 404 });

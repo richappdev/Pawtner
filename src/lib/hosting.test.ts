@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isBlockedDirectCloudRunRequest } from "@/lib/hosting";
+import {
+  isBlockedDirectCloudRunRequest,
+  isBlockedStagingApiRequest,
+} from "@/lib/hosting";
 
 describe("isBlockedDirectCloudRunRequest", () => {
   it("blocks the direct staging Cloud Run hostname", () => {
@@ -27,6 +30,16 @@ describe("isBlockedDirectCloudRunRequest", () => {
     ).toBe(false);
   });
 
+  it("allows Firebase Hosting's rewrite to the internal service host", () => {
+    expect(
+      isBlockedDirectCloudRunRequest(
+        "staging",
+        "pawtner-hosting-web-staging-pvu47vzmnq-de.a.run.app",
+        "pawtner-tw-staging.web.app",
+      ),
+    ).toBe(false);
+  });
+
   it("does not change production direct-host behavior", () => {
     expect(
       isBlockedDirectCloudRunRequest(
@@ -34,5 +47,21 @@ describe("isBlockedDirectCloudRunRequest", () => {
         "pawtner-hosting-web-611592714843.asia-east1.run.app",
       ),
     ).toBe(false);
+  });
+});
+
+describe("isBlockedStagingApiRequest", () => {
+  it("blocks API execution on the staging frontend service", () => {
+    expect(isBlockedStagingApiRequest("staging", "/api/applications")).toBe(true);
+  });
+
+  it("allows pages on the staging frontend service", () => {
+    expect(isBlockedStagingApiRequest("staging", "/applications")).toBe(false);
+  });
+
+  it("does not change production API behavior", () => {
+    expect(isBlockedStagingApiRequest("production", "/api/applications")).toBe(
+      false,
+    );
   });
 });

@@ -7,6 +7,7 @@ import {
   isFirebaseAuthEnabled,
 } from "@/lib/auth/firebase-flags";
 import { logger } from "@/lib/logging";
+import { deploymentMetadata } from "@/lib/environment";
 import { createServiceClient } from "@/lib/supabase/server";
 
 /**
@@ -14,6 +15,7 @@ import { createServiceClient } from "@/lib/supabase/server";
  * Does not expose secrets. Pair with Cloud Logging + Sentry alerts.
  */
 export async function GET() {
+  const deployment = deploymentMetadata();
   let firebaseIdentityCount: number | null = null;
   let supabaseIdentityCount: number | null = null;
 
@@ -41,6 +43,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    deployment,
     phase: "phase-4-cutover",
     metrics: {
       firebaseAuthEnabled: isFirebaseAuthEnabled(),
@@ -52,6 +55,8 @@ export async function GET() {
       supabaseConfigured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
       serviceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
       sentryConfigured: Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN),
+      closedPilotAdoptionOperations:
+        process.env.FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED === "true",
     },
     alertsSuggested: [
       "Elevated 401/403 rate on /api/*",

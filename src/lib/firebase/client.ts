@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 
 function required(value: string | undefined, name: string): string {
   if (!value) {
@@ -15,16 +15,20 @@ export function getFirebaseWebConfig() {
       "NEXT_PUBLIC_FIREBASE_API_KEY",
     ),
     authDomain:
-      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "pawtner-app-2026.firebaseapp.com",
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "pawtner-app-2026",
+      required(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
+    projectId: required(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, "NEXT_PUBLIC_FIREBASE_PROJECT_ID"),
     appId: required(process.env.NEXT_PUBLIC_FIREBASE_APP_ID, "NEXT_PUBLIC_FIREBASE_APP_ID"),
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "611592714843",
+    messagingSenderId: required(
+      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    ),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 }
 
 let browserApp: FirebaseApp | undefined;
+let auth: Auth | undefined;
 
 export function getFirebaseApp(): FirebaseApp {
   if (browserApp) return browserApp;
@@ -33,5 +37,14 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  if (auth) return auth;
+  auth = getAuth(getFirebaseApp());
+  if (process.env.NEXT_PUBLIC_PAWTNER_ENV === "local") {
+    const host = required(
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
+      "NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST",
+    );
+    connectAuthEmulator(auth, `http://${host}`, { disableWarnings: true });
+  }
+  return auth;
 }

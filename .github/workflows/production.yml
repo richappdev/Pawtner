@@ -1,0 +1,105 @@
+name: Release production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pawtner-production
+  cancel-in-progress: false
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run security:secrets
+
+  build:
+    needs: release-gate
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.image.outputs.uri }}
+      image_digest: ${{ steps.image.outputs.digest }}
+    env:
+      PRODUCTION_FIREBASE_PROJECT_ID: pawtner-app-2026
+      PRODUCTION_SUPABASE_URL: https://rlwctljjjvlxrexcgqmg.supabase.co
+      REGION: asia-east1
+      SERVICE_NAME: pawtner-hosting-web
+      ARTIFACT_REPOSITORY: pawtner-images
+    steps:
+      - uses: actions/checkout@v4
+      - id: google-auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PRODUCTION_BUILD_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: pawtner-app-2026
+      - name: Build production-specific image
+        run: |
+          gcloud builds submit --project="$PRODUCTION_FIREBASE_PROJECT_ID" --config=cloudbuild.yaml \
+            --substitutions="_IMAGE_TAG=$GITHUB_SHA,_PAWTNER_ENV=production,_STAGING_SUPABASE_PROJECT_REF=unused,_SUPABASE_URL=$PRODUCTION_SUPABASE_URL,_FIREBASE_AUTH_DOMAIN=pawtner-app-2026.firebaseapp.com,_FIREBASE_PROJECT_ID=pawtner-app-2026,_FIREBASE_APP_ID=1:611592714843:web:b10424774e91a6ff9add7e,_FIREBASE_MESSAGING_SENDER_ID=611592714843,_FIREBASE_STORAGE_BUCKET=pawtner-app-2026.firebasestorage.app,_FIREBASE_MEASUREMENT_ID=G-M1XR7TSR2E,_FIREBASE_OBSERVABILITY_ENABLED=true,_GOVERNMENT_PETS_ENABLED=true,_ADOPTION_OPERATIONS_ENABLED=false"
+      - id: image
+        run: |
+          image="$REGION-docker.pkg.dev/$PRODUCTION_FIREBASE_PROJECT_ID/$ARTIFACT_REPOSITORY/$SERVICE_NAME:$GITHUB_SHA"
+          digest="$(gcloud artifacts docker images describe "$image" --format='value(image_summary.digest)')"
+          echo "uri=$REGION-docker.pkg.dev/$PRODUCTION_FIREBASE_PROJECT_ID/$ARTIFACT_REPOSITORY/$SERVICE_NAME@$digest" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
+      REGION: asia-east1
+      SERVICE_NAME: pawtner-hosting-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+          github-token: ${{ github.token }}
+      - name: Apply reviewed production migrations after approval
+        run: |
+          supabase link --project-ref rlwctljjjvlxrexcgqmg --password "$SUPABASE_DB_PASSWORD"
+          supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --dry-run
+          supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+          supabase migration list --linked --password "$SUPABASE_DB_PASSWORD"
+      - id: google-auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PRODUCTION_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: pawtner-app-2026
+      - name: Deploy pinned production image
+        run: |
+          gcloud run deploy "$SERVICE_NAME" --project=pawtner-app-2026 --region="$REGION" \
+            --image="${{ needs.build.outputs.image_uri }}" --service-account="${{ vars.PRODUCTION_RUNTIME_SERVICE_ACCOUNT }}" \
+            --allow-unauthenticated --port=8080 --cpu=1 --memory=1Gi --min=0 --max=10 --concurrency=80 \
+            --set-env-vars="PAWTNER_ENV=production,NEXT_PUBLIC_PAWTNER_ENV=production,PAWTNER_COMMIT_SHA=$GITHUB_SHA,PAWTNER_IMAGE_DIGEST=${{ needs.build.outputs.image_digest }},NEXT_PUBLIC_SUPABASE_URL=https://rlwctljjjvlxrexcgqmg.supabase.co,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=pawtner-app-2026.firebaseapp.com,NEXT_PUBLIC_FIREBASE_PROJECT_ID=pawtner-app-2026,NEXT_PUBLIC_FIREBASE_APP_ID=1:611592714843:web:b10424774e91a6ff9add7e,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=611592714843,FIREBASE_ADMIN_PROJECT_ID=pawtner-app-2026,FEATURE_FIREBASE_AUTH_ENABLED=true,NEXT_PUBLIC_FEATURE_FIREBASE_AUTH_ENABLED=true,FEATURE_GOVERNMENT_PETS_ENABLED=true,FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED=false,NEXT_PUBLIC_FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED=false,NEXT_PUBLIC_SITE_URL=https://pawtner-tw.web.app" \
+            --set-secrets="NEXT_PUBLIC_SUPABASE_ANON_KEY=NEXT_PUBLIC_SUPABASE_ANON_KEY:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest"
+      - name: Deploy production Hosting
+        run: npx firebase-tools@latest deploy --config firebase.production.json --only hosting:production --project pawtner-app-2026 --non-interactive
+      - name: Production smoke
+        run: |
+          curl --fail --retry 5 --retry-delay 5 https://pawtner-tw.web.app/api/health
+          curl --fail --retry 5 --retry-delay 5 https://pawtner-tw.web.app/

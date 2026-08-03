@@ -1,0 +1,93 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pawtner-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      PAWTNER_ENV: staging
+      STAGING_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+      STAGING_FIREBASE_APP_ID: ${{ vars.STAGING_FIREBASE_APP_ID }}
+      STAGING_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.STAGING_FIREBASE_MESSAGING_SENDER_ID }}
+      STAGING_SUPABASE_PROJECT_REF: ${{ vars.STAGING_SUPABASE_PROJECT_REF }}
+      STAGING_SUPABASE_URL: https://${{ vars.STAGING_SUPABASE_PROJECT_REF }}.supabase.co
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      STAGING_FIXTURE_PASSWORD: ${{ secrets.STAGING_FIXTURE_PASSWORD }}
+      REGION: asia-east1
+      SERVICE_NAME: pawtner-hosting-web
+      ARTIFACT_REPOSITORY: pawtner-images
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+          github-token: ${{ github.token }}
+      - name: Apply migrations to the persistent staging branch
+        run: |
+          supabase link --project-ref "$STAGING_SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+          supabase migration list --linked --password "$SUPABASE_DB_PASSWORD"
+      - id: google-auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.STAGING_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+      - name: Install synthetic staging identities and data
+        run: npm run fixtures:staging
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: fixture-script-does-not-use-the-public-key
+          NEXT_PUBLIC_FIREBASE_API_KEY: fixture-script-does-not-use-the-public-key
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ env.STAGING_FIREBASE_PROJECT_ID }}.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ env.STAGING_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ env.STAGING_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ env.STAGING_FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_ADMIN_PROJECT_ID: ${{ env.STAGING_FIREBASE_PROJECT_ID }}
+          PAWTNER_STAGING_SUPABASE_PROJECT_REF: ${{ env.STAGING_SUPABASE_PROJECT_REF }}
+      - name: Build the staging image
+        run: |
+          gcloud builds submit --project="$STAGING_FIREBASE_PROJECT_ID" --config=cloudbuild.yaml \
+            --substitutions="_IMAGE_TAG=$GITHUB_SHA,_PAWTNER_ENV=staging,_STAGING_SUPABASE_PROJECT_REF=$STAGING_SUPABASE_PROJECT_REF,_SUPABASE_URL=$STAGING_SUPABASE_URL,_FIREBASE_AUTH_DOMAIN=$STAGING_FIREBASE_PROJECT_ID.firebaseapp.com,_FIREBASE_PROJECT_ID=$STAGING_FIREBASE_PROJECT_ID,_FIREBASE_APP_ID=$STAGING_FIREBASE_APP_ID,_FIREBASE_MESSAGING_SENDER_ID=$STAGING_FIREBASE_MESSAGING_SENDER_ID,_FIREBASE_STORAGE_BUCKET=$STAGING_FIREBASE_PROJECT_ID.firebasestorage.app,_FIREBASE_OBSERVABILITY_ENABLED=true,_GOVERNMENT_PETS_ENABLED=true,_ADOPTION_OPERATIONS_ENABLED=true"
+      - name: Resolve immutable image digest
+        id: image
+        run: |
+          image="$REGION-docker.pkg.dev/$STAGING_FIREBASE_PROJECT_ID/$ARTIFACT_REPOSITORY/$SERVICE_NAME:$GITHUB_SHA"
+          digest="$(gcloud artifacts docker images describe "$image" --format='value(image_summary.digest)')"
+          echo "uri=$REGION-docker.pkg.dev/$STAGING_FIREBASE_PROJECT_ID/$ARTIFACT_REPOSITORY/$SERVICE_NAME@$digest" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Deploy staging Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE_NAME" --project="$STAGING_FIREBASE_PROJECT_ID" --region="$REGION" \
+            --image="${{ steps.image.outputs.uri }}" --service-account="${{ vars.STAGING_RUNTIME_SERVICE_ACCOUNT }}" \
+            --allow-unauthenticated --port=8080 --cpu=1 --memory=1Gi --min=0 --max=10 --concurrency=80 \
+            --set-env-vars="PAWTNER_ENV=staging,NEXT_PUBLIC_PAWTNER_ENV=staging,PAWTNER_STAGING_SUPABASE_PROJECT_REF=$STAGING_SUPABASE_PROJECT_REF,PAWTNER_COMMIT_SHA=$GITHUB_SHA,PAWTNER_IMAGE_DIGEST=${{ steps.image.outputs.digest }},NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$STAGING_FIREBASE_PROJECT_ID.firebaseapp.com,NEXT_PUBLIC_FIREBASE_PROJECT_ID=$STAGING_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_APP_ID=$STAGING_FIREBASE_APP_ID,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$STAGING_FIREBASE_MESSAGING_SENDER_ID,FIREBASE_ADMIN_PROJECT_ID=$STAGING_FIREBASE_PROJECT_ID,FEATURE_FIREBASE_AUTH_ENABLED=true,NEXT_PUBLIC_FEATURE_FIREBASE_AUTH_ENABLED=true,FEATURE_GOVERNMENT_PETS_ENABLED=true,FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED=true,NEXT_PUBLIC_FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED=true,NEXT_PUBLIC_SITE_URL=https://$STAGING_FIREBASE_PROJECT_ID.web.app" \
+            --set-secrets="NEXT_PUBLIC_SUPABASE_ANON_KEY=NEXT_PUBLIC_SUPABASE_ANON_KEY:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest"
+      - name: Deploy staging Hosting
+        run: npx firebase-tools@latest deploy --config firebase.staging.json --only hosting:staging --project "$STAGING_FIREBASE_PROJECT_ID" --non-interactive
+      - name: Staging smoke
+        run: |
+          curl --fail --retry 5 --retry-delay 5 "https://$STAGING_FIREBASE_PROJECT_ID.web.app/api/health"
+          curl --fail --retry 5 --retry-delay 5 "https://$STAGING_FIREBASE_PROJECT_ID.web.app/recommend"

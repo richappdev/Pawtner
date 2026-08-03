@@ -13,6 +13,21 @@ runConfig:
   concurrency: 80
 
 env:
+  - variable: PAWTNER_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_PAWTNER_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: PAWTNER_COMMIT_SHA
+    value: app-hosting-rollback
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_SUPABASE_URL
     value: https://rlwctljjjvlxrexcgqmg.supabase.co
     availability:
@@ -94,6 +109,18 @@ env:
 
   - variable: FEATURE_GOVERNMENT_PETS_ENABLED
     value: "true"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FEATURE_CLOSED_PILOT_ADOPTION_OPERATIONS_ENABLED
+    value: "false"
     availability:
       - BUILD
       - RUNTIME

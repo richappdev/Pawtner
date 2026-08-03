@@ -1,0 +1,21 @@
+{
+  "hosting": {
+    "target": "production",
+    "public": "public",
+    "ignore": [
+      "firebase.production.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "pawtner-hosting-web",
+          "region": "asia-east1",
+          "pinTag": true
+        }
+      }
+    ]
+  }
+}

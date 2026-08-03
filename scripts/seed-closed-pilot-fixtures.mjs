@@ -1,16 +1,48 @@
 import { createClient } from "@supabase/supabase-js";
+import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
-if (process.env.PAWTNER_ENV !== "staging") {
-  throw new Error("Closed-pilot fixtures are staging-only. Set PAWTNER_ENV=staging explicitly.");
-}
+const environment = process.env.PAWTNER_ENV;
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const password = process.env.STAGING_FIXTURE_PASSWORD;
-if (!url || !key || !password || password.length < 12) {
+const firebaseProjectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+const productionSupabaseRef = "rlwctljjjvlxrexcgqmg";
+const approvedStagingProjects = new Set(["pawtner-staging-2026", "pawtner-stg-714843"]);
+
+if (environment !== "local" && environment !== "staging") {
+  throw new Error("Closed-pilot fixtures run only with PAWTNER_ENV=local or PAWTNER_ENV=staging.");
+}
+if (!url || !key || !password || password.length < 12 || !firebaseProjectId) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and a 12+ character STAGING_FIXTURE_PASSWORD are required.");
+}
+const supabaseHost = new URL(url).hostname;
+const hostedRef = supabaseHost.match(/^([a-z0-9]+)\.supabase\.co$/)?.[1];
+if (hostedRef === productionSupabaseRef || firebaseProjectId === "pawtner-app-2026") {
+  throw new Error("Refusing to install synthetic fixtures in production.");
+}
+if (environment === "staging") {
+  const expectedRef = process.env.PAWTNER_STAGING_SUPABASE_PROJECT_REF;
+  if (!hostedRef || hostedRef !== expectedRef || !approvedStagingProjects.has(firebaseProjectId)) {
+    throw new Error("Staging fixture identifiers do not match the approved isolated environment.");
+  }
+}
+if (environment === "local") {
+  if (!["127.0.0.1", "localhost"].includes(supabaseHost) || firebaseProjectId !== "pawtner-local") {
+    throw new Error("Local fixtures must use local Supabase and the pawtner-local Firebase emulator.");
+  }
+  if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+    throw new Error("FIREBASE_AUTH_EMULATOR_HOST is required for local fixtures.");
+  }
 }
 
 const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+const firebaseApp = getApps()[0] ?? initializeApp(
+  environment === "staging"
+    ? { projectId: firebaseProjectId, credential: applicationDefault() }
+    : { projectId: firebaseProjectId },
+);
+const firebaseAuth = getAuth(firebaseApp);
 const people = [
   ["admin", "pilot-admin@pawtner.invalid", "Pilot Admin"],
   ["pending", "pilot-pending-foster@pawtner.invalid", "Pending Foster"],
@@ -21,22 +53,32 @@ const people = [
   ["adopterC", "pilot-adopter-c@pawtner.invalid", "Adopter C"],
 ];
 
-const existing = new Map();
-for (let page = 1; page <= 10; page += 1) {
-  const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
-  if (error) throw error;
-  for (const user of data.users) existing.set(user.email, user);
-  if (data.users.length < 100) break;
-}
 const users = {};
 for (const [keyName, email, displayName] of people) {
-  let user = existing.get(email);
-  if (!user) {
-    const { data, error } = await supabase.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: displayName } });
-    if (error) throw error;
-    user = data.user;
+  let firebaseUser;
+  try {
+    firebaseUser = await firebaseAuth.getUserByEmail(email);
+    firebaseUser = await firebaseAuth.updateUser(firebaseUser.uid, {
+      password,
+      displayName,
+      emailVerified: true,
+      disabled: false,
+    });
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") throw error;
+    firebaseUser = await firebaseAuth.createUser({
+      email,
+      password,
+      displayName,
+      emailVerified: true,
+    });
   }
-  users[keyName] = user.id;
+  const { data: internalUserId, error: provisionError } = await supabase.rpc(
+    "provision_firebase_identity",
+    { p_firebase_uid: firebaseUser.uid, p_email: email, p_display_name: displayName },
+  );
+  if (provisionError || !internalUserId) throw provisionError ?? new Error(`Failed to provision ${email}`);
+  users[keyName] = internalUserId;
 }
 
 async function upsert(table, rows, onConflict = "id") {
@@ -83,7 +125,10 @@ await upsert("pets", [
   { id: pets.privateA, foster_profile_id: fosterIds.a, source_type: "private_foster", name: "Pilot Miso", species: "dog", status: "application_pending", review_status: "approved", is_published: true, region: "New Taipei City", personality_summary: "Calm structured pilot fixture.", adoption_conditions: "Structured matching required." },
   { id: pets.privateB, foster_profile_id: fosterIds.a, source_type: "private_foster", name: "Pilot Nori", species: "cat", status: "application_pending", review_status: "approved", is_published: true, region: "New Taipei City", personality_summary: "Moderate energy pilot fixture.", adoption_conditions: "Indoor home." },
   { id: pets.privateC, foster_profile_id: fosterIds.b, source_type: "private_foster", name: "Pilot Taro", species: "dog", status: "adopted", review_status: "approved", is_published: false, region: "Taichung City", personality_summary: "Completed adoption fixture.", adoption_conditions: "Follow-up participation." },
-  { id: pets.government, foster_profile_id: null, source_type: "government", name: "Pilot Shelter Pet", species: "dog", status: "available", review_status: "approved", is_published: true, region: "Taipei City", personality_summary: null, adoption_conditions: null },
+  // Insert as a temporary private record because the deferred government-source
+  // constraint commits at the end of each REST request. It is converted after
+  // its external source record exists below.
+  { id: pets.government, foster_profile_id: fosterIds.b, source_type: "private_foster", name: "Pilot Shelter Pet", species: "dog", status: "available", review_status: "approved", is_published: true, region: "Taipei City", personality_summary: null, adoption_conditions: null },
 ]);
 await upsert("pet_traits", [
   { pet_id: pets.privateA, energy_level: 2, child_friendly: 4, sociability_dogs: 3 },
@@ -103,6 +148,12 @@ if (source) await upsert("pet_source_records", [{
   official_url: "https://www.pet.gov.tw/", availability: "open", quality_status: "clean",
   publication_status: "published", content_hash: "pilot-fixture", raw_payload: {}, last_seen_at: new Date().toISOString(),
 }], "pet_id");
+if (!source) throw new Error("Government pet source is missing.");
+const { error: governmentPetError } = await supabase
+  .from("pets")
+  .update({ source_type: "government", foster_profile_id: null })
+  .eq("id", pets.government);
+if (governmentPetError) throw new Error(`pets: ${governmentPetError.message}`);
 
 const applications = {
   submitted: "73000000-0000-4000-8000-000000000001",
@@ -132,6 +183,7 @@ const adoptedAt = Date.now() - 35 * 86_400_000;
 await upsert("adoption_followups", [7, 30, 90].map((day, index) => ({
   id: `75000000-0000-4000-8000-00000000000${index + 1}`, application_id: applications.adopted,
   day_offset: day, due_at: new Date(adoptedAt + day * 86_400_000).toISOString(),
+  status: day === 7 ? "completed" : "pending",
   ...(day === 7 ? { submitted_at: new Date(adoptedAt + 8 * 86_400_000).toISOString(), reviewed_at: new Date(adoptedAt + 9 * 86_400_000).toISOString(), reviewed_by: users.fosterB, response: { summary: "Stable" }, outcome: "stable", status: "completed", completed_at: new Date(adoptedAt + 9 * 86_400_000).toISOString() } : {}),
 })), "application_id,day_offset");
 await upsert("notifications", [{
@@ -145,5 +197,9 @@ await upsert("pilot_invitations", [users.adopterA, users.adopterB, users.adopter
   token_hash: `staging-fixture-${index + 1}`, intended_role: "adopter", invited_by: users.admin,
   expires_at: "2099-01-01T00:00:00Z", accepted_at: new Date().toISOString(), accepted_by: userId,
 })), "id");
-await supabase.from("feature_flags").update({ enabled: true, updated_at: new Date().toISOString() }).eq("key", "closed_pilot_adoption_operations");
-console.info(JSON.stringify({ event: "closed_pilot_fixtures.seeded", users: people.length, pets: Object.keys(pets).length, applications: Object.keys(applications).length }));
+const { error: featureFlagError } = await supabase
+  .from("feature_flags")
+  .update({ enabled: true, updated_at: new Date().toISOString() })
+  .eq("key", "closed_pilot_adoption_operations");
+if (featureFlagError) throw new Error(`feature_flags: ${featureFlagError.message}`);
+console.info(JSON.stringify({ event: "closed_pilot_fixtures.seeded", environment, users: people.length, pets: Object.keys(pets).length, applications: Object.keys(applications).length }));

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "node scripts/run-ui-tests.mjs",
+    "fixtures:local": "node scripts/seed-closed-pilot-fixtures.mjs",
     "fixtures:staging": "node scripts/seed-closed-pilot-fixtures.mjs",
     "typecheck": "tsc --noEmit"
   },

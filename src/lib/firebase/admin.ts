@@ -7,8 +7,8 @@ function initAdminApp(): App {
 
   const projectId =
     process.env.FIREBASE_ADMIN_PROJECT_ID ??
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
-    "pawtner-app-2026";
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (!projectId) throw new Error("Missing required environment variable: FIREBASE_ADMIN_PROJECT_ID");
 
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");

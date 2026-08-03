@@ -13,28 +13,11 @@
       "port": 4000
     }
   },
-  "apphosting": {
-    "backendId": "pawtner-web",
-    "rootDir": "/",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "**/.*",
-      ".next",
-      "docs",
-      "scripts",
-      "supabase/tests",
-      "supabase/migrations",
-      "Dockerfile"
-    ]
-  },
   "hosting": {
-    "target": "production",
+    "target": "staging",
     "public": "public",
     "ignore": [
-      "firebase.json",
+      "firebase.staging.json",
       "**/.*",
       "**/node_modules/**"
     ],

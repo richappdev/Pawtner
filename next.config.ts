@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
+import { validateEnvironment } from "./src/lib/environment";
+
+validateEnvironment();
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : "rlwctljjjvlxrexcgqmg.supabase.co";
+const supabaseHostname = new URL(supabaseUrl!).hostname;
 
 const nextConfig: NextConfig = {
   // Required for Cloud Run / Docker fallback image (see Dockerfile).

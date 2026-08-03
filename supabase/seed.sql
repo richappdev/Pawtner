@@ -1,0 +1,2 @@
+-- Cloud staging and local acceptance data are installed by
+-- scripts/seed-closed-pilot-fixtures.mjs after migrations complete.

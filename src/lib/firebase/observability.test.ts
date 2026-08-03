@@ -26,6 +26,9 @@ describe("Firebase observability", () => {
   it("adds the optional measurement ID to the existing Firebase config", () => {
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY = "public-key";
     process.env.NEXT_PUBLIC_FIREBASE_APP_ID = "app-id";
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "pawtner-local.firebaseapp.com";
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "pawtner-local";
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "000000000000";
     process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID = "G-TEST123";
     expect(getFirebaseWebConfig().measurementId).toBe("G-TEST123");
   });

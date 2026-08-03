@@ -4,6 +4,7 @@ import type {
   PetSourcePublicationStatus,
   PetSourceQualityStatus,
   PetSourceType,
+  PetReviewStatus,
   PetSpecies,
   PetStatus,
 } from "@/lib/schemas/pet";
@@ -12,6 +13,7 @@ export interface AdminPetListFilters {
   status?: PetStatus;
   species?: PetSpecies;
   source?: PetSourceType;
+  reviewStatus?: PetReviewStatus;
   qualityStatus?: PetSourceQualityStatus;
   publicationStatus?: PetSourcePublicationStatus;
   isPublished?: boolean;
@@ -41,6 +43,7 @@ export async function listAdminPets(supabase: SupabaseClient, filters: AdminPetL
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.species) query = query.eq("species", filters.species);
   if (filters.source) query = query.eq("source_type", filters.source);
+  if (filters.reviewStatus) query = query.eq("review_status", filters.reviewStatus);
   if (filters.isPublished !== undefined) query = query.eq("is_published", filters.isPublished);
   if (filters.qualityStatus) {
     query = query.eq("pet_source_records.quality_status", filters.qualityStatus);

@@ -56,6 +56,15 @@ describe("listAdminPets", () => {
 
     expect(query.eq).toHaveBeenCalledWith("region", "臺北市");
   });
+
+  it("filters private pets by review status", async () => {
+    const query = queryMock();
+    const supabase = { from: vi.fn(() => query) };
+
+    await listAdminPets(supabase as never, { reviewStatus: "pending_review" });
+
+    expect(query.eq).toHaveBeenCalledWith("review_status", "pending_review");
+  });
 });
 
 describe("listAdminPetRegions", () => {

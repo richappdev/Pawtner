@@ -2,7 +2,7 @@
 
 AI-assisted pet adoption matching, private foster CRM, materials commerce, and **legal organization donation redirects** for Taiwan.
 
-Canonical product spec: [Notion AI Implementation Plan](https://app.notion.com/p/3a6a4181b628815fa430c421d73ce655)
+Canonical project index: [Pawtner Project Home](https://app.notion.com/p/104a4181b628802b93fdee5ce0dadee0)
 
 ## Hard boundaries
 
@@ -13,9 +13,19 @@ Canonical product spec: [Notion AI Implementation Plan](https://app.notion.com/p
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
-- Supabase (Auth, Postgres RLS, Storage)
+- Firebase Auth with an internal-user bridge; Supabase Postgres RLS and Storage
 - Zod + React Hook Form + TanStack Query
 - Vitest
+
+## Current status
+
+Reviewed on **2026-08-03** against synchronized `main` commit `a4eb6be` plus the current worktree:
+
+- Firebase Hosting serves the production site through the independent Cloud Run service.
+- Firebase Auth is enabled for all users; the legacy Supabase Auth client path remains only for the documented rollback window.
+- Government discovery, controlled publication, Admin Pets, dashboard counts, and admin photo galleries are implemented.
+- Site-wide SEO and consent-gated Firebase Analytics/Performance foundations are implemented. Observability remains disabled until the console setup, privacy review, and staging verification in `docs/firebase-observability.md` are complete.
+- The closed pilot is **not ready to open**: non-pet admin queues, adopter/foster end-to-end workflows, legal approval, environment/release-switch verification, production auth smoke evidence, alerts, fixtures, and role-based acceptance remain open.
 
 ## Repositories
 

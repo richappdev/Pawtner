@@ -101,6 +101,9 @@ describe("getAdminDashboardStats", () => {
       }],
     });
     expect(stats.actionRequired.map((metric) => metric.value)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(stats.actionRequired[0].href).toBe(
+      "/admin/pets?source=private_foster&reviewStatus=pending_review&region=",
+    );
     expect(stats.platformHealth.map((metric) => metric.value)).toEqual([8, 9, 10, 11]);
     expect(stats.hasErrors).toBe(false);
   });

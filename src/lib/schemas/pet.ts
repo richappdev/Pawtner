@@ -16,6 +16,12 @@ export const petStatusSchema = z.enum([
 
 export const petSpeciesSchema = z.enum(["dog", "cat", "other"]);
 export const petSourceTypeSchema = z.enum(["private_foster", "government"]);
+export const petReviewStatusSchema = z.enum([
+  "draft",
+  "pending_review",
+  "changes_requested",
+  "approved",
+]);
 export const petAgeBandSchema = z.enum(["child", "adult", "senior", "unknown"]);
 export const petBodySizeSchema = z.enum(["small", "medium", "large", "unknown"]);
 export const petSourceQualityStatusSchema = z.enum(["pending", "clean", "warning", "blocked"]);
@@ -58,6 +64,7 @@ export const adminPetListQuerySchema = z.object({
   status: petStatusSchema.optional(),
   species: petSpeciesSchema.optional(),
   source: petSourceTypeSchema.optional(),
+  reviewStatus: petReviewStatusSchema.optional(),
   qualityStatus: petSourceQualityStatusSchema.optional(),
   publicationStatus: petSourcePublicationStatusSchema.optional(),
   isPublished: z
@@ -134,6 +141,7 @@ export const adminPetPatchSchema = z
 export type PetStatus = z.infer<typeof petStatusSchema>;
 export type PetSpecies = z.infer<typeof petSpeciesSchema>;
 export type PetSourceType = z.infer<typeof petSourceTypeSchema>;
+export type PetReviewStatus = z.infer<typeof petReviewStatusSchema>;
 export type PetSourceQualityStatus = z.infer<typeof petSourceQualityStatusSchema>;
 export type PetSourcePublicationStatus = z.infer<typeof petSourcePublicationStatusSchema>;
 export type PetCreateInput = z.infer<typeof petCreateSchema>;

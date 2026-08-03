@@ -145,7 +145,7 @@ export async function getAdminDashboardStats(
       {
         key: "private-pets-pending-review",
         label: "中途寵物待審核",
-        href: "/admin/pets?source=private_foster",
+        href: "/admin/pets?source=private_foster&reviewStatus=pending_review&region=",
         tone: "warning",
       },
       privatePetsPendingReview,

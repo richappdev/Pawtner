@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export function PetMediaManager({
   sourceType: "private_foster" | "government";
   initialMedia: AdminPetMediaItem[];
 }) {
+  const t = useTranslations("Admin.media");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState(initialMedia);
@@ -59,11 +61,11 @@ export function PetMediaManager({
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       const raw = await response.text();
-      if (!response.ok) throw new Error(responseMessage(raw, "Unable to update pet photos."));
+      if (!response.ok) throw new Error(responseMessage(raw, t("updateFailed")));
       router.refresh();
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update pet photos.");
+      setError(caught instanceof Error ? caught.message : t("updateFailed"));
       return false;
     } finally {
       setPending(null);
@@ -76,7 +78,7 @@ export function PetMediaManager({
     setError(null);
 
     if (selected.length > remaining) {
-      setError(`You can upload ${remaining} more photo${remaining === 1 ? "" : "s"}.`);
+      setError(t("remainingError", { count: remaining }));
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
@@ -87,7 +89,7 @@ export function PetMediaManager({
         file.size > MAX_PET_PHOTO_BYTES,
     );
     if (invalid) {
-      setError(`${invalid.name} must be a JPEG, PNG, or WebP file no larger than 20 MB.`);
+      setError(t("invalidFile", { name: invalid.name }));
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
@@ -103,7 +105,7 @@ export function PetMediaManager({
     };
     request.onload = () => {
       if (request.status < 200 || request.status >= 300) {
-        setError(responseMessage(request.responseText, "Unable to upload pet photos."));
+        setError(responseMessage(request.responseText, t("uploadFailed")));
       } else {
         router.refresh();
       }
@@ -112,7 +114,7 @@ export function PetMediaManager({
       if (inputRef.current) inputRef.current.value = "";
     };
     request.onerror = () => {
-      setError("The upload connection failed. Please try again.");
+      setError(t("connectionFailed"));
       setPending(null);
       setUploadProgress(null);
       if (inputRef.current) inputRef.current.value = "";
@@ -137,20 +139,20 @@ export function PetMediaManager({
     <Card className="max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="eyebrow">PET MEDIA</p>
-          <h2 className="display mt-2 text-2xl">Photos</h2>
+          <p className="eyebrow">{t("eyebrow")}</p>
+          <h2 className="display mt-2 text-2xl">{t("title")}</h2>
           <p className="mt-2 text-sm text-muted">
-            Add up to five public photos. The selected cover appears on Explore and first on the pet detail page.
+            {t("description")}
           </p>
         </div>
         <Badge variant={remaining === 0 ? "pending" : "neutral"}>
-          {uploaded.length}/{MAX_UPLOADED_PET_PHOTOS} uploaded
+          {t("uploaded", { current: uploaded.length, maximum: MAX_UPLOADED_PET_PHOTOS })}
         </Badge>
       </div>
 
       <div className="mt-5 rounded-2xl border border-dashed p-4">
         <label className="field-label" htmlFor={`pet-media-${petId}`}>
-          Upload JPEG, PNG, or WebP
+          {t("uploadLabel")}
         </label>
         <input
           ref={inputRef}
@@ -164,15 +166,15 @@ export function PetMediaManager({
         />
         <p className="mt-2 text-xs text-muted">
           {remaining > 0
-            ? `${remaining} photo${remaining === 1 ? "" : "s"} remaining · 20 MB per file`
-            : "Photo limit reached"}
+            ? t("remaining", { count: remaining })
+            : t("limitReached")}
         </p>
         {uploadProgress !== null ? (
           <div className="mt-3" aria-live="polite">
             <div className="h-2 overflow-hidden rounded-full bg-surface-soft">
               <div className="h-full bg-accent transition-[width]" style={{ width: `${uploadProgress}%` }} />
             </div>
-            <p className="mt-1 text-xs font-semibold">{uploadProgress}% uploaded</p>
+            <p className="mt-1 text-xs font-semibold">{t("progress", { progress: uploadProgress })}</p>
           </div>
         ) : null}
       </div>
@@ -184,14 +186,14 @@ export function PetMediaManager({
               <div className="relative aspect-[4/3] bg-surface-soft">
                 <Image
                   src={item.url}
-                  alt={`${petName} uploaded photo ${index + 1}`}
+                  alt={t("alt", { name: petName, number: index + 1 })}
                   fill
                   unoptimized
                   className="object-cover"
                 />
                 <div className="absolute top-3 left-3 flex gap-2">
                   <Badge>#{index + 1}</Badge>
-                  {item.isCover ? <Badge variant="success">Cover</Badge> : null}
+                  {item.isCover ? <Badge variant="success">{t("cover")}</Badge> : null}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 p-3">
@@ -205,7 +207,7 @@ export function PetMediaManager({
                       void mutate(`/api/admin/pets/${petId}/media/${item.id}/cover`, "PATCH")
                     }
                   >
-                    Set as cover
+                    {t("setCover")}
                   </Button>
                 ) : null}
                 <Button
@@ -214,9 +216,9 @@ export function PetMediaManager({
                   variant="quiet"
                   disabled={pending !== null || index === 0}
                   onClick={() => void move(index, -1)}
-                  aria-label={`Move photo ${index + 1} earlier`}
+                  aria-label={t("moveEarlier", { number: index + 1 })}
                 >
-                  Move up
+                  {t("moveUp")}
                 </Button>
                 <Button
                   type="button"
@@ -224,9 +226,9 @@ export function PetMediaManager({
                   variant="quiet"
                   disabled={pending !== null || index === uploaded.length - 1}
                   onClick={() => void move(index, 1)}
-                  aria-label={`Move photo ${index + 1} later`}
+                  aria-label={t("moveLater", { number: index + 1 })}
                 >
-                  Move down
+                  {t("moveDown")}
                 </Button>
                 <Button
                   type="button"
@@ -235,29 +237,29 @@ export function PetMediaManager({
                   disabled={pending !== null}
                   onClick={() => void mutate(`/api/admin/pets/${petId}/media/${item.id}`, "DELETE")}
                 >
-                  Delete
+                  {t("delete")}
                 </Button>
               </div>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="mt-5 rounded-2xl bg-surface-soft p-4 text-sm text-muted">No Pawtner photos uploaded.</p>
+        <p className="mt-5 rounded-2xl bg-surface-soft p-4 text-sm text-muted">{t("none")}</p>
       )}
 
       {sourceType === "government" && governmentFallback ? (
         <div className="mt-6 border-t pt-5">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">Official government fallback</h3>
-            <Badge variant="pending">Read only</Badge>
+            <h3 className="font-semibold">{t("governmentFallback")}</h3>
+            <Badge variant="pending">{t("readOnly")}</Badge>
           </div>
           <p className="mt-1 text-xs text-muted">
-            This image is shown publicly only when no Pawtner photo has been uploaded.
+            {t("fallbackDescription")}
           </p>
           <div className="relative mt-3 aspect-[4/3] max-w-sm overflow-hidden rounded-2xl bg-surface-soft">
             <Image
               src={governmentFallback.url}
-              alt={`${petName} official government photo`}
+              alt={t("governmentAlt", { name: petName })}
               fill
               unoptimized
               className="object-cover"

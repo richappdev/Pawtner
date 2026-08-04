@@ -1,16 +1,16 @@
 "use client";
 
 import { clsx } from "clsx";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { NotificationBadge } from "@/components/nav/notification-badge";
+import { useTranslations } from "next-intl";
 
 const items = [
-  ["探索", "Explore", "/explore", "⌕"],
-  ["推薦", "Recommend", "/recommend", "✦"],
-  ["收藏", "Favorites", "/favorites", "♡"],
-  ["申請", "Applications", "/applications", "▤"],
-  ["我的", "Me", "/me", "○"],
+  ["explore", "/explore", "⌕"],
+  ["recommend", "/recommend", "✦"],
+  ["favorites", "/favorites", "♡"],
+  ["applications", "/applications", "▤"],
+  ["me", "/me", "○"],
 ] as const;
 
 export function AdopterNav({
@@ -19,14 +19,15 @@ export function AdopterNav({
   showAdminPetsShortcut?: boolean;
 }) {
   const pathname = usePathname();
+  const t = useTranslations("Navigation");
 
   return (
     <>
       <header className="sticky top-0 z-30 hidden border-b bg-paper/95 backdrop-blur md:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-7 py-3">
           <Link href="/" className="latin-display text-2xl font-semibold">Pawtner</Link>
-          <nav aria-label="領養者導覽" className="flex items-center gap-1">
-            {items.map(([label, english, href]) => {
+          <nav aria-label={t("adopterAria")} className="flex items-center gap-1">
+            {items.map(([key, href]) => {
               const active = pathname === href || (href === "/explore" && pathname.startsWith("/pets/"));
               return (
                 <Link
@@ -38,31 +39,31 @@ export function AdopterNav({
                     active ? "bg-mint text-accent" : "text-muted hover:bg-surface hover:text-ink",
                   )}
                 >
-                  {label}{href === "/me" ? <NotificationBadge /> : null}<span className="sr-only"> {english}</span>
+                  {t(key)}{href === "/me" ? <NotificationBadge /> : null}
                 </Link>
               );
             })}
             {showAdminPetsShortcut ? (
               <Link href="/admin" className="ml-2 min-h-11 rounded-xl border px-4 py-3 text-sm font-bold text-accent">
-                管理後台
+                {t("admin")}
               </Link>
             ) : null}
           </nav>
         </div>
       </header>
 
-      <nav aria-label="領養者導覽" className="fixed inset-x-0 bottom-0 z-30 border-t bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav aria-label={t("adopterAria")} className="fixed inset-x-0 bottom-0 z-30 border-t bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {showAdminPetsShortcut ? (
           <Link
             href="/admin"
-            aria-label="管理後台"
+            aria-label={t("admin")}
             className="absolute -top-14 right-4 inline-flex h-12 items-center rounded-full bg-accent px-4 text-sm font-bold text-white shadow-lg"
           >
-            管理後台
+            {t("admin")}
           </Link>
         ) : null}
         <div className="mx-auto grid max-w-lg grid-cols-5">
-          {items.map(([label, english, href, icon]) => {
+          {items.map(([key, href, icon]) => {
             const active = pathname === href;
             return (
               <Link
@@ -75,8 +76,7 @@ export function AdopterNav({
                 )}
               >
                 <span className="text-lg leading-none" aria-hidden="true">{icon}</span>
-                <span>{label}</span>
-                <span className="sr-only">{english}</span>
+                <span>{t(key)}</span>
               </Link>
             );
           })}

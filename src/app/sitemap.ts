@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import { listPublicPetIds } from "@/lib/pets/public-data";
 import { absoluteUrl } from "@/lib/seo";
 import { createServiceClient } from "@/lib/supabase/server";
+import { SUPPORTED_LOCALES, localizePathname } from "@/i18n/routing";
 
 const STATIC_PATHS = [
   "/",
@@ -42,21 +43,26 @@ async function listDonationOrgSlugs(): Promise<string[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
-    url: absoluteUrl(path),
+  const languageAlternates = (path: string) => Object.fromEntries(
+    SUPPORTED_LOCALES.map((locale) => [locale, absoluteUrl(localizePathname(path, locale))]),
+  );
+  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.flatMap((path) => SUPPORTED_LOCALES.map((locale) => ({
+    url: absoluteUrl(localizePathname(path, locale)),
     changeFrequency: path === "/" || path === "/explore" ? "daily" : "monthly",
     priority: path === "/" ? 1 : path === "/explore" ? 0.9 : 0.5,
-  }));
+    alternates: { languages: languageAlternates(path) },
+  })));
 
   let petEntries: MetadataRoute.Sitemap = [];
   try {
     const pets = await listPublicPetIds();
-    petEntries = pets.map((pet) => ({
-      url: absoluteUrl(`/pets/${pet.id}`),
+    petEntries = pets.flatMap((pet) => SUPPORTED_LOCALES.map((locale) => ({
+      url: absoluteUrl(localizePathname(`/pets/${pet.id}`, locale)),
       lastModified: pet.publishedAt ? new Date(pet.publishedAt) : undefined,
       changeFrequency: "daily",
       priority: 0.8,
-    }));
+      alternates: { languages: languageAlternates(`/pets/${pet.id}`) },
+    })));
   } catch {
     petEntries = [];
   }
@@ -64,11 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let donateEntries: MetadataRoute.Sitemap = [];
   try {
     const slugs = await listDonationOrgSlugs();
-    donateEntries = slugs.map((slug) => ({
-      url: absoluteUrl(`/donate/${slug}`),
+    donateEntries = slugs.flatMap((slug) => SUPPORTED_LOCALES.map((locale) => ({
+      url: absoluteUrl(localizePathname(`/donate/${slug}`, locale)),
       changeFrequency: "weekly",
       priority: 0.4,
-    }));
+      alternates: { languages: languageAlternates(`/donate/${slug}`) },
+    })));
   } catch {
     donateEntries = [];
   }

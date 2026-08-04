@@ -7,6 +7,12 @@ import { PetCard } from "@/components/pet-card";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import type { PublicPetSummary } from "@/lib/pets/public-types";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "../../messages/zh-TW.json";
+
+function localized(node: React.ReactNode) {
+  return <NextIntlClientProvider locale="zh-TW" messages={messages}>{node}</NextIntlClientProvider>;
+}
 
 describe("shared UI primitives", () => {
   it("renders typed button and badge variants with accessible content", () => {
@@ -24,7 +30,7 @@ describe("shared UI primitives", () => {
 
   it("always gives actionable empty states a real destination", () => {
     const markup = renderToStaticMarkup(
-      <EmptyState title="還沒有收藏" description="先去認識毛孩。" action={{ href: "/explore", label: "去探索" }} />,
+      localized(<EmptyState title="還沒有收藏" description="先去認識毛孩。" action={{ href: "/explore", label: "去探索" }} />),
     );
     expect(markup).toContain("還沒有收藏");
     expect(markup).toContain('href="/explore"');
@@ -32,7 +38,7 @@ describe("shared UI primitives", () => {
 
   it("renders match reasons and missing confirmations", () => {
     const markup = renderToStaticMarkup(
-      <MatchExplanation
+      localized(<MatchExplanation
         result={{
           score: 82,
           eligible: true,
@@ -42,7 +48,7 @@ describe("shared UI primitives", () => {
           questions: ["是否能安排每日散步？"],
           breakdown: {},
         }}
-      />,
+      />),
     );
     expect(markup).toContain("為什麼可能適合你");
     expect(markup).toContain("作息接近");
@@ -76,7 +82,7 @@ describe("pet card", () => {
       profileCompleteness: 80,
       publishedAt: "2026-07-28T00:00:00Z",
     };
-    const markup = renderToStaticMarkup(<PetCard pet={pet} />);
+    const markup = renderToStaticMarkup(localized(<PetCard pet={pet} />));
     const identity = markup.indexOf(pet.name);
     const facts = markup.indexOf("2 歲 5 個月");
     const source = markup.indexOf("示範合作組織");

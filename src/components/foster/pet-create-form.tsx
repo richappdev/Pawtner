@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
+import { useTranslations } from "next-intl";
 
 export interface FosterPetFormValues {
   name?: string;
@@ -37,6 +38,9 @@ export function PetCreateForm({
   initial?: FosterPetFormValues;
 }) {
   const router = useRouter();
+  const t = useTranslations("PetForm");
+  const enumT = useTranslations("Enums");
+  const actionT = useTranslations("Actions");
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
 
@@ -74,7 +78,7 @@ export function PetCreateForm({
     const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
     setPending(false);
     if (!response.ok) {
-      setMessage(payload?.error?.message ?? "無法儲存動物資料，請稍後再試。");
+      setMessage(payload?.error?.message ?? t("saveFailedDescription"));
       return;
     }
     router.push("/foster/pets");
@@ -83,43 +87,43 @@ export function PetCreateForm({
 
   return (
     <form action={submit} className="mt-8 space-y-6">
-      {message ? <Alert title="儲存失敗" tone="danger">{message}</Alert> : null}
+      {message ? <Alert title={t("saveFailed")} tone="danger">{message}</Alert> : null}
       <Card>
-        <p className="eyebrow">BASIC RECORD</p>
-        <h2 className="display mt-2 text-2xl">基本資料</h2>
+        <p className="eyebrow">{t("basicRecord")}</p>
+        <h2 className="display mt-2 text-2xl">{t("basicInfo")}</h2>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <label className="field-label">名字<Input name="name" required maxLength={100} defaultValue={initial.name ?? ""} className="mt-2" /></label>
-          <label className="field-label">物種<Select name="species" defaultValue={initial.species ?? "dog"} className="mt-2"><option value="dog">狗</option><option value="cat">貓</option><option value="other">其他</option></Select></label>
-          <label className="field-label">品種<Input name="breed" maxLength={100} defaultValue={initial.breed ?? ""} className="mt-2" /></label>
-          <label className="field-label">性別<Select name="sex" defaultValue={initial.sex ?? "unknown"} className="mt-2"><option value="unknown">未知</option><option value="female">母</option><option value="male">公</option></Select></label>
-          <label className="field-label">年齡（月）<Input name="ageMonths" type="number" min={0} max={600} defaultValue={initial.ageMonths ?? ""} className="mt-2" /></label>
-          <label className="field-label">年齡階段<Select name="ageBand" defaultValue={initial.ageBand ?? "unknown"} className="mt-2"><option value="unknown">未知</option><option value="child">幼年</option><option value="adult">成年</option><option value="senior">高齡</option></Select></label>
-          <label className="field-label">體型<Select name="bodySize" defaultValue={initial.bodySize ?? "unknown"} className="mt-2"><option value="unknown">未知</option><option value="small">小型</option><option value="medium">中型</option><option value="large">大型</option></Select></label>
-          <label className="field-label">體重（kg）<Input name="weightKg" type="number" min={0.1} max={200} step="0.1" defaultValue={initial.weightKg ?? ""} className="mt-2" /></label>
-          <label className="field-label">地區<Input name="region" maxLength={80} defaultValue={initial.region ?? ""} className="mt-2" /></label>
-          <label className="field-label">發現地點<Input name="foundLocation" maxLength={500} defaultValue={initial.foundLocation ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("name")}<Input name="name" required maxLength={100} defaultValue={initial.name ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("species")}<Select name="species" defaultValue={initial.species ?? "dog"} className="mt-2"><option value="dog">{enumT("dog")}</option><option value="cat">{enumT("cat")}</option><option value="other">{enumT("other")}</option></Select></label>
+          <label className="field-label">{t("breed")}<Input name="breed" maxLength={100} defaultValue={initial.breed ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("sex")}<Select name="sex" defaultValue={initial.sex ?? "unknown"} className="mt-2"><option value="unknown">{enumT("unknown")}</option><option value="female">{enumT("female")}</option><option value="male">{enumT("male")}</option></Select></label>
+          <label className="field-label">{t("ageMonths")}<Input name="ageMonths" type="number" min={0} max={600} defaultValue={initial.ageMonths ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("ageBand")}<Select name="ageBand" defaultValue={initial.ageBand ?? "unknown"} className="mt-2"><option value="unknown">{enumT("unknown")}</option><option value="child">{t("child")}</option><option value="adult">{t("adult")}</option><option value="senior">{t("senior")}</option></Select></label>
+          <label className="field-label">{t("bodySize")}<Select name="bodySize" defaultValue={initial.bodySize ?? "unknown"} className="mt-2"><option value="unknown">{enumT("unknown")}</option><option value="small">{t("small")}</option><option value="medium">{t("medium")}</option><option value="large">{t("large")}</option></Select></label>
+          <label className="field-label">{t("weightKg")}<Input name="weightKg" type="number" min={0.1} max={200} step="0.1" defaultValue={initial.weightKg ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("region")}<Input name="region" maxLength={80} defaultValue={initial.region ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("foundLocation")}<Input name="foundLocation" maxLength={500} defaultValue={initial.foundLocation ?? ""} className="mt-2" /></label>
         </div>
       </Card>
 
       <Card>
-        <p className="eyebrow">DAILY LIFE</p>
-        <h2 className="display mt-2 text-2xl">個性與照護</h2>
+        <p className="eyebrow">{t("dailyLife")}</p>
+        <h2 className="display mt-2 text-2xl">{t("personalityCare")}</h2>
         <div className="mt-5 space-y-5">
-          <label className="field-label">個性描述<Textarea name="personalitySummary" maxLength={5000} defaultValue={initial.personalitySummary ?? ""} className="mt-2" /></label>
-          <label className="field-label">特殊照護<Textarea name="specialCare" maxLength={5000} defaultValue={initial.specialCare ?? ""} className="mt-2" /></label>
-          <label className="field-label">認養條件<Textarea name="adoptionConditions" maxLength={5000} defaultValue={initial.adoptionConditions ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("personality")}<Textarea name="personalitySummary" maxLength={5000} defaultValue={initial.personalitySummary ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("specialCare")}<Textarea name="specialCare" maxLength={5000} defaultValue={initial.specialCare ?? ""} className="mt-2" /></label>
+          <label className="field-label">{t("adoptionConditions")}<Textarea name="adoptionConditions" maxLength={5000} defaultValue={initial.adoptionConditions ?? ""} className="mt-2" /></label>
         </div>
       </Card>
 
       <Card tone="mint">
-        <h2 className="display text-2xl">健康狀態</h2>
+        <h2 className="display text-2xl">{t("health")}</h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {[
-            ["sterilized", "已絕育", initial.sterilized],
-            ["microchipped", "已植入晶片", initial.microchipped],
-            ["vaccinated", "已完成一般疫苗", initial.vaccinated],
-            ["rabiesVaccinated", "已施打狂犬病疫苗", initial.rabiesVaccinated],
-            ["dewormed", "已驅蟲", initial.dewormed],
+            ["sterilized", t("sterilized"), initial.sterilized],
+            ["microchipped", t("microchipped"), initial.microchipped],
+            ["vaccinated", t("vaccinated"), initial.vaccinated],
+            ["rabiesVaccinated", t("rabiesVaccinated"), initial.rabiesVaccinated],
+            ["dewormed", t("dewormed"), initial.dewormed],
           ].map(([name, label, checked]) => (
             <label key={String(name)} className="flex min-h-11 items-center gap-3 rounded-xl bg-surface px-4 text-sm font-bold">
               <input name={String(name)} type="checkbox" defaultChecked={Boolean(checked)} className="h-5 w-5 accent-[var(--forest)]" />
@@ -130,8 +134,8 @@ export function PetCreateForm({
       </Card>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button type="button" variant="quiet" onClick={() => router.back()}>取消</Button>
-        <Button type="submit" disabled={pending}>{pending ? "儲存中…" : petId ? "儲存變更" : "建立動物"}</Button>
+        <Button type="button" variant="quiet" onClick={() => router.back()}>{actionT("cancel")}</Button>
+        <Button type="submit" disabled={pending}>{pending ? t("saving") : petId ? t("saveChanges") : t("createPet")}</Button>
       </div>
     </form>
   );

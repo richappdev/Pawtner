@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import type { PetMediaView } from "@/lib/pets/public-types";
+import { useTranslations } from "next-intl";
 
 export function PetMediaPlaceholder({
   name,
@@ -12,17 +13,18 @@ export function PetMediaPlaceholder({
   name: string;
   className?: string;
 }) {
+  const t = useTranslations("SharedPet");
   return (
     <div
       role="img"
-      aria-label={`${name}的照片準備中`}
+      aria-label={t("photoPreparing", { name })}
       className={`paper-grid relative flex min-h-48 items-end overflow-hidden bg-mint p-5 ${className}`}
     >
       <div className="absolute -left-8 top-8 h-32 w-40 rotate-12 rounded-[42%] bg-sage/80" />
       <div className="absolute right-8 top-8 h-24 w-24 -rotate-12 rounded-[35%] bg-apricot/85" />
       <div className="absolute bottom-10 left-1/2 h-24 w-40 -translate-x-1/2 rounded-[50%_50%_40%_40%] border-2 border-accent/25 bg-surface/55" />
       <span className="relative z-10 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-bold text-accent">
-        照片準備中
+        {t("photoPreparingShort")}
       </span>
     </div>
   );
@@ -39,6 +41,7 @@ export function PetCover({
   className?: string;
   priority?: boolean;
 }) {
+  const t = useTranslations("SharedPet");
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const failed = Boolean(media?.url && failedUrl === media.url);
 
@@ -59,7 +62,7 @@ export function PetCover({
       />
       {media.isAiEdited ? (
         <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-bold text-muted">
-          影像曾協助調整
+          {t("aiEdited")}
         </span>
       ) : null}
     </div>

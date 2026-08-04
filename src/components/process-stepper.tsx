@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { useTranslations } from "next-intl";
 
 export function ProcessStepper({
   steps,
@@ -7,8 +8,9 @@ export function ProcessStepper({
   steps: readonly string[];
   current: number;
 }) {
+  const t = useTranslations("Common");
   return (
-    <ol aria-label="領養流程" className="grid gap-3 sm:grid-cols-4">
+    <ol aria-label={t("adoptionProcess")} className="grid gap-3 sm:grid-cols-4">
       {steps.map((step, index) => {
         const complete = index < current;
         const active = index === current;

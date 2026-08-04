@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import type { AdminDashboardStats } from "@/lib/admin/dashboard-stats";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "../../../messages/zh-TW.json";
+
+function renderDashboard() {
+  return renderToStaticMarkup(<NextIntlClientProvider locale="zh-TW" messages={messages}><AdminDashboard stats={stats} /></NextIntlClientProvider>);
+}
 
 const stats: AdminDashboardStats = {
   actionRequired: [
@@ -37,7 +43,7 @@ const stats: AdminDashboardStats = {
 
 describe("AdminDashboard", () => {
   it("renders formatted counts, zeroes, links, headings, and partial errors", () => {
-    const markup = renderToStaticMarkup(<AdminDashboard stats={stats} />);
+    const markup = renderDashboard();
 
     expect(markup).toContain("需要處理");
     expect(markup).toContain("平台概況");
@@ -51,7 +57,7 @@ describe("AdminDashboard", () => {
   });
 
   it("uses responsive one, two, and four-column grids", () => {
-    const markup = renderToStaticMarkup(<AdminDashboard stats={stats} />);
+    const markup = renderDashboard();
 
     expect(markup).toContain("grid gap-4 sm:grid-cols-2 xl:grid-cols-4");
   });

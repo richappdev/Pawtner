@@ -1,8 +1,8 @@
 "use client";
 
-import Link, { type LinkProps } from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useEffect } from "react";
-import type { AnchorHTMLAttributes, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from "react";
 
 import { buttonClasses, type ButtonSize, type ButtonVariant } from "@/components/ui/button";
 import { trackEvent } from "@/lib/firebase/observability";
@@ -63,7 +63,7 @@ export function TrackedLeadLink({
   size = "lg",
   onClick,
   ...props
-}: LinkProps & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & {
+}: ComponentProps<typeof Link> & {
   pet: SafePetDimensions;
   leadType: "pawtner_application" | "shelter_contact";
   children: ReactNode;

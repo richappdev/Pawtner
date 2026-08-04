@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useReportWebVitals } from "next/web-vitals";
 
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 import {
   getConsentSnapshot,
   OPEN_CONSENT_SETTINGS_EVENT,
@@ -22,6 +23,7 @@ import {
 const WEB_VITAL_NAMES = new Set(["CLS", "FCP", "INP", "LCP", "TTFB"]);
 
 export function FirebaseObservability() {
+  const t = useTranslations("Privacy");
   const pathname = usePathname();
   const choice = useSyncExternalStore(subscribeToConsent, getConsentSnapshot, () => null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -70,20 +72,19 @@ export function FirebaseObservability() {
 
   return (
     <section
-      aria-label="隱私權設定"
+      aria-label={t("aria")}
       className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-3xl rounded-[20px] border bg-surface p-5 shadow-[var(--shadow-lift)] sm:p-6"
     >
-      <h2 className="display text-xl">您的隱私選擇</h2>
+      <h2 className="display text-xl">{t("choiceTitle")}</h2>
       <p className="mt-2 text-sm leading-6 text-muted">
-        我們只會在您同意後，使用 Firebase Analytics 與 Performance 收集匿名化的使用情形和效能資料。
-        必要的登入與安全功能不受此選擇影響。
+        {t("choiceDescription")}
       </p>
       <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={() => choose("denied")}>
-          僅使用必要功能
+          {t("necessaryOnly")}
         </Button>
         <Button type="button" onClick={() => choose("granted")}>
-          允許分析資料
+          {t("allowAnalytics")}
         </Button>
       </div>
     </section>

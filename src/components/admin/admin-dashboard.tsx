@@ -1,19 +1,17 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 import { Card } from "@/components/ui/card";
 import type {
   AdminDashboardStats,
   DashboardMetric,
 } from "@/lib/admin/dashboard-stats";
-
-const numberFormatter = new Intl.NumberFormat("zh-TW");
-
-function formatMetricValue(metric: DashboardMetric): string {
-  return metric.value === null ? "—" : numberFormatter.format(metric.value);
-}
+import { useFormatter, useTranslations } from "next-intl";
 
 function MetricCard({ metric }: { metric: DashboardMetric }) {
-  const value = formatMetricValue(metric);
+  const t = useTranslations("Admin.dashboard");
+  const format = useFormatter();
+  const value = metric.value === null ? "—" : format.number(metric.value);
+  const label = t.has(`metrics.${metric.key}` as Parameters<typeof t.has>[0]) ? t(`metrics.${metric.key}` as Parameters<typeof t>[0]) : metric.label;
   const tone = metric.tone === "success"
     ? "mint"
     : metric.tone === "neutral"
@@ -23,7 +21,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
   return (
     <Link
       href={metric.href}
-      aria-label={`${metric.label}：${value}`}
+      aria-label={`${label}：${value}`}
       className="group block rounded-[20px] focus-visible:outline-offset-4"
     >
       <Card
@@ -31,7 +29,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
         interactive
         className={metric.tone === "danger" ? "border-clay/40 bg-[#fff4f1]" : undefined}
       >
-        <p className="text-sm font-bold text-muted">{metric.label}</p>
+        <p className="text-sm font-bold text-muted">{label}</p>
         <p
           className={`latin-display mt-3 text-4xl font-semibold ${
             metric.tone === "danger" ? "text-clay" : "text-ink"
@@ -42,7 +40,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
         <p className={`mt-3 text-xs font-semibold ${
           metric.error ? "text-clay" : "text-accent group-hover:underline"
         }`}>
-          {metric.error ? "資料暫時無法取得" : "查看詳情"}
+          {metric.error ? t("unavailable") : t("details")}
         </p>
       </Card>
     </Link>
@@ -62,35 +60,33 @@ function MetricGrid({
 }
 
 export function AdminDashboard({ stats }: { stats: AdminDashboardStats }) {
-  const updatedAt = new Date(stats.updatedAt).toLocaleString("zh-TW", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Taipei",
-  });
+  const t = useTranslations("Admin.dashboard");
+  const format = useFormatter();
+  const updatedAt = format.dateTime(new Date(stats.updatedAt), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Taipei" });
 
   return (
     <div className="space-y-10">
       {stats.hasErrors ? (
         <div role="alert" className="rounded-2xl border border-clay/30 bg-[#fff4f1] px-4 py-3 text-sm">
-          部分統計資料暫時無法取得；其他數字仍為即時資料。
+          {t("partialError")}
         </div>
       ) : null}
 
       <section aria-labelledby="dashboard-actions-heading">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="dashboard-actions-heading" className="display text-2xl">需要處理</h2>
-            <p className="mt-1 text-sm text-muted">優先掌握審核、履約與安全相關工作。</p>
+            <h2 id="dashboard-actions-heading" className="display text-2xl">{t("actions")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("actionsDescription")}</p>
           </div>
-          <p className="text-xs text-muted">更新時間：{updatedAt}</p>
+          <p className="text-xs text-muted">{t("updated", { date: updatedAt })}</p>
         </div>
         <MetricGrid metrics={stats.actionRequired} />
       </section>
 
       <section aria-labelledby="dashboard-health-heading">
         <div className="mb-5">
-          <h2 id="dashboard-health-heading" className="display text-2xl">平台概況</h2>
-          <p className="mt-1 text-sm text-muted">目前送養服務與領養流程的整體狀態。</p>
+          <h2 id="dashboard-health-heading" className="display text-2xl">{t("health")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("healthDescription")}</p>
         </div>
         <MetricGrid metrics={stats.platformHealth} />
       </section>
@@ -99,8 +95,9 @@ export function AdminDashboard({ stats }: { stats: AdminDashboardStats }) {
 }
 
 export function AdminDashboardSkeleton() {
+  const t = useTranslations("Admin.dashboard");
   return (
-    <div aria-label="正在載入管理儀表板統計" className="space-y-10">
+    <div aria-label={t("loading")} className="space-y-10">
       {[8, 4].map((count, groupIndex) => (
         <section key={count} aria-hidden="true">
           <div className="mb-5 h-8 w-36 animate-pulse rounded-lg bg-sage/40" />

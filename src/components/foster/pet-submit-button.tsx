@@ -1,11 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export function PetSubmitButton({ petId }: { petId: string }) {
   const router = useRouter();
+  const t = useTranslations("SharedPet");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string>();
   async function submit() {
@@ -15,8 +17,8 @@ export function PetSubmitButton({ petId }: { petId: string }) {
     });
     const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
     setPending(false);
-    setMessage(response.ok ? "已送交平台審核" : payload?.error?.message ?? "無法送審");
+    setMessage(response.ok ? t("submitted") : payload?.error?.message ?? t("submitFailed"));
     if (response.ok) router.refresh();
   }
-  return <div><Button type="button" variant="secondary" disabled={pending} onClick={() => void submit()}>{pending ? "送審中…" : "送交審核"}</Button>{message ? <p className="mt-2 text-xs text-muted">{message}</p> : null}</div>;
+  return <div><Button type="button" variant="secondary" disabled={pending} onClick={() => void submit()}>{pending ? t("submitting") : t("submit")}</Button>{message ? <p className="mt-2 text-xs text-muted">{message}</p> : null}</div>;
 }

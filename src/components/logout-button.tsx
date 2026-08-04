@@ -1,14 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 import { signOutFirebase } from "@/lib/firebase/session";
+import { useTranslations } from "next-intl";
 
 export function LogoutButton() {
   const router = useRouter();
+  const t = useTranslations("Common");
   const [pending, setPending] = useState(false);
 
   async function logout() {
@@ -31,7 +33,7 @@ export function LogoutButton() {
 
   return (
     <Button type="button" variant="secondary" disabled={pending} onClick={logout}>
-      {pending ? "登出中…" : "登出"}
+      {pending ? t("loggingOut") : t("logout")}
     </Button>
   );
 }

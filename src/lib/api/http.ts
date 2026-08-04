@@ -10,9 +10,20 @@ export function jsonOk<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json({ data }, { status: 200, ...init });
 }
 
-export function jsonError(message: string, status = 400, details?: unknown) {
+export function jsonError(
+  message: string,
+  status = 400,
+  details?: unknown,
+  code?: string,
+) {
   return NextResponse.json(
-    { error: { message, ...(details === undefined ? {} : { details }) } },
+    {
+      error: {
+        ...(code === undefined ? {} : { code }),
+        message,
+        ...(details === undefined ? {} : { details }),
+      },
+    },
     { status },
   );
 }

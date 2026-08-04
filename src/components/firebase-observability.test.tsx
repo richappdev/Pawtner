@@ -24,6 +24,12 @@ vi.mock("@/lib/firebase/observability", async (importOriginal) => {
 });
 
 import { FirebaseObservability } from "@/components/firebase-observability";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "../../messages/zh-TW.json";
+
+function renderObservability() {
+  return render(<NextIntlClientProvider locale="zh-TW" messages={messages}><FirebaseObservability /></NextIntlClientProvider>);
+}
 
 describe("FirebaseObservability", () => {
   beforeEach(() => {
@@ -35,7 +41,7 @@ describe("FirebaseObservability", () => {
   afterEach(cleanup);
 
   it("shows accessible opt-in controls and persists necessary-only", () => {
-    render(<FirebaseObservability />);
+    renderObservability();
     expect(screen.getByRole("region", { name: "隱私權設定" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "僅使用必要功能" }));
     expect(JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY) ?? "{}").analytics).toBe("denied");
@@ -48,7 +54,7 @@ describe("FirebaseObservability", () => {
       analytics: "granted",
       updatedAt: "2026-07-31T08:00:00.000Z",
     }));
-    render(<FirebaseObservability />);
+    renderObservability();
     await waitFor(() => expect(trackEventMock).toHaveBeenCalledWith("page_view", {
       page_path: "/pets/[id]",
       page_location: "http://localhost:3000/pets/[id]",
@@ -62,7 +68,7 @@ describe("FirebaseObservability", () => {
       analytics: "granted",
       updatedAt: "2026-07-31T08:00:00.000Z",
     }));
-    render(<FirebaseObservability />);
+    renderObservability();
     window.dispatchEvent(new Event(OPEN_CONSENT_SETTINGS_EVENT));
     expect(await screen.findByRole("region", { name: "隱私權設定" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "僅使用必要功能" }));

@@ -1,14 +1,16 @@
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import type { MatchResult } from "@/lib/matching/score";
+import { useTranslations } from "next-intl";
 
 export function MatchExplanation({ result }: { result: MatchResult }) {
+  const t = useTranslations("SharedPet");
   return (
     <Card tone="warm" className="space-y-5">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">MATCH NOTES</p>
-          <h2 className="display mt-2 text-2xl">為什麼可能適合你</h2>
+          <p className="eyebrow">{t("matchNotes")}</p>
+          <h2 className="display mt-2 text-2xl">{t("whyMatch")}</h2>
         </div>
         <p className="latin-display text-4xl font-semibold text-clay">
           {result.score === null ? "—" : result.score}
@@ -24,10 +26,10 @@ export function MatchExplanation({ result }: { result: MatchResult }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm leading-6 text-muted">完成生活偏好後，我們會在這裡說明適配原因。</p>
+        <p className="text-sm leading-6 text-muted">{t("completePreferences")}</p>
       )}
       {result.risks.length || result.questions.length ? (
-        <Alert title="還需要一起確認" tone="warning">
+        <Alert title={t("confirmTogether")} tone="warning">
           {[...result.risks, ...result.questions].slice(0, 3).join("、")}
         </Alert>
       ) : null}

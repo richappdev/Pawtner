@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
-import Link, { type LinkProps } from "next/link";
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
+
+import { Link } from "@/i18n/navigation";
+import type { ButtonHTMLAttributes, ComponentProps } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "warm" | "quiet" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -45,8 +46,7 @@ export function ButtonLink({
   variant = "primary",
   size = "md",
   ...props
-}: LinkProps &
-  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & {
+}: ComponentProps<typeof Link> & {
     variant?: ButtonVariant;
     size?: ButtonSize;
   }) {

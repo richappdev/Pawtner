@@ -1,19 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PetSourcePublicationStatus, PetSourceQualityStatus } from "@/lib/schemas/pet";
+import { useTranslations } from "next-intl";
 
 type PublicationAction = "approve" | "publish" | "hold" | "unpublish";
-
-const LABELS: Record<PublicationAction, string> = {
-  approve: "通過資料審核",
-  publish: "正式發布",
-  hold: "暫緩發布",
-  unpublish: "取消發布",
-};
 
 function availableActions(status: PetSourcePublicationStatus): PublicationAction[] {
   if (status === "approved") return ["publish", "hold"];
@@ -31,6 +25,7 @@ export function GovernmentPublicationActions({
   qualityStatus: PetSourceQualityStatus;
 }) {
   const router = useRouter();
+  const t = useTranslations("Enums.tools");
   const [pending, startTransition] = useTransition();
   const [active, setActive] = useState<PublicationAction | null>(null);
   const [reason, setReason] = useState("");
@@ -48,13 +43,13 @@ export function GovernmentPublicationActions({
       });
       const payload = await response.json() as { error?: { message?: string } };
       if (!response.ok) {
-        setError(payload.error?.message ?? "無法更新發布狀態。");
+        setError(payload.error?.message ?? t("publicationFailed"));
         return;
       }
       setReason("");
       startTransition(() => router.refresh());
     } catch {
-      setError("無法更新發布狀態。");
+      setError(t("publicationFailed"));
     } finally {
       setActive(null);
     }
@@ -67,7 +62,7 @@ export function GovernmentPublicationActions({
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           maxLength={2_000}
-          placeholder="暫緩／取消發布原因"
+          placeholder={t("publicationReason")}
           className="min-h-9 w-full min-w-44 rounded-xl border bg-surface px-3 py-2 text-xs"
         />
       ) : null}
@@ -88,13 +83,13 @@ export function GovernmentPublicationActions({
               }
               onClick={() => void run(action)}
             >
-              {active === action ? "處理中…" : LABELS[action]}
+              {active === action ? t("processing") : action === "approve" ? t("approveData") : t(action)}
             </Button>
           );
         })}
       </div>
       {qualityStatus === "blocked" ? (
-        <p className="text-xs text-red-700">請先修正阻擋問題；此筆資料目前不能核准或發布。</p>
+        <p className="text-xs text-red-700">{t("blocked")}</p>
       ) : null}
       {error ? <p className="text-xs text-red-700">{error}</p> : null}
     </div>

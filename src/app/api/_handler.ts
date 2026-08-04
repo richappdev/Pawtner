@@ -8,6 +8,7 @@ import { canAccessAdmin, canApproveAi, canManagePet } from "@/lib/auth/permissio
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
 import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
+import { appLocaleSchema } from "@/i18n/schema";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
 import { runAdminPetBulkAction } from "@/lib/pets/admin-bulk";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
@@ -528,7 +529,7 @@ export async function PATCH(request: Request) {
       z.object({
         display_name: z.string().min(1).max(100).optional(),
         phone: z.string().max(40).optional(),
-        locale: z.string().max(20).optional(),
+        locale: appLocaleSchema.optional(),
       }),
     );
     if ("response" in body) return body.response;

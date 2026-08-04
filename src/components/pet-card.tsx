@@ -1,14 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 import { PetCover } from "@/components/pet-media";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verification-row";
-import { formatAge, PET_STATUS_PRESENTATION, SEX_LABELS } from "@/lib/pets/presentation";
+import { PET_STATUS_PRESENTATION } from "@/lib/pets/presentation";
 import type { PublicPetSummary } from "@/lib/pets/public-types";
 import { trackEvent } from "@/lib/firebase/observability";
+import { useTranslations } from "next-intl";
 
 export function PetCard({
   pet,
@@ -18,14 +19,21 @@ export function PetCard({
   listId?: "home_featured" | "explore_results";
 }) {
   const status = PET_STATUS_PRESENTATION[pet.status];
+  const t = useTranslations("SharedPet");
+  const enumT = useTranslations("Enums");
+  const detailT = useTranslations("PetDetail");
   const age = pet.ageMonths
-    ? formatAge(pet.ageMonths)
+    ? pet.ageMonths >= 12
+      ? pet.ageMonths % 12
+        ? detailT("ageYearsMonths", { years: Math.floor(pet.ageMonths / 12), months: pet.ageMonths % 12 })
+        : detailT("ageYears", { years: Math.floor(pet.ageMonths / 12) })
+      : detailT("ageMonths", { count: pet.ageMonths })
     : pet.ageBand === "child"
-      ? "幼年"
+      ? t("young")
       : pet.ageBand === "adult"
-        ? "成年"
+        ? t("adult")
         : pet.ageBand === "senior"
-          ? "高齡"
+          ? t("senior")
           : null;
 
   return (
@@ -45,10 +53,10 @@ export function PetCard({
           <PetCover media={pet.coverMedia} name={pet.name} className="aspect-square" />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">
             <Badge variant={status.variant} icon={<span aria-hidden="true">{status.icon}</span>}>
-              {status.label}
+              {enumT(pet.status)}
             </Badge>
             <Badge variant={pet.sourceType === "government" ? "pending" : "neutral"}>
-              {pet.sourceType === "government" ? "政府開放資料" : "Pawtner 中途"}
+              {pet.sourceType === "government" ? t("governmentSource") : t("fosterSource")}
             </Badge>
           </div>
         </div>
@@ -59,7 +67,7 @@ export function PetCard({
               <span className="shrink-0 pt-1 text-sm font-bold text-muted">{pet.profileCompleteness}%</span>
             </div>
             <p className="mt-1 text-sm text-muted">
-              {[pet.sex ? SEX_LABELS[pet.sex] : null, age, pet.breed].filter(Boolean).join(" · ")}
+              {[pet.sex ? enumT(pet.sex) : null, age, pet.breed].filter(Boolean).join(" · ")}
             </p>
           </div>
           {pet.sourceType === "government" ? (
@@ -81,7 +89,7 @@ export function PetCard({
             </div>
           ) : null}
           <p className="font-bold text-accent group-hover:underline">
-            {pet.sourceType === "government" ? "查看收容所聯絡方式" : `認識 ${pet.name}`}
+            {pet.sourceType === "government" ? t("viewShelter") : t("meetPet", { name: pet.name })}
           </p>
         </div>
       </Link>

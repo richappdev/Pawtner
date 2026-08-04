@@ -8,11 +8,11 @@ const viewports = [
 ] as const;
 
 const publicRoutes = [
-  { path: "/", heading: "讓每次相遇" },
-  { path: "/explore", heading: "遇見正在等家的牠" },
-  { path: "/login", heading: "歡迎回來" },
-  { path: "/products", heading: "照護物資" },
-  { path: "/legal/privacy", heading: "隱私權政策" },
+  { path: "/zh-TW", heading: "讓每次相遇" },
+  { path: "/zh-TW/explore", heading: "遇見正在等家的牠" },
+  { path: "/zh-TW/login", heading: "歡迎回來" },
+  { path: "/zh-TW/products", heading: "照護物資" },
+  { path: "/zh-TW/legal/privacy", heading: "隱私權政策" },
 ] as const;
 
 for (const viewport of viewports) {
@@ -29,7 +29,7 @@ for (const viewport of viewports) {
     }
 
     test("controls expose keyboard focus and usable touch targets", async ({ page }) => {
-      await page.goto("/explore");
+      await page.goto("/zh-TW/explore");
       const firstControl = page.locator("a, button, input, select").first();
       await firstControl.focus();
       await expect(firstControl).toBeFocused();
@@ -47,8 +47,8 @@ for (const viewport of viewports) {
 }
 
 test("pet detail uses the first real public result when available", async ({ page }) => {
-  await page.goto("/explore");
-  const petLinks = page.locator('a[href^="/pets/"]');
+  await page.goto("/zh-TW/explore");
+  const petLinks = page.locator('a[href*="/pets/"]');
   if ((await petLinks.count()) === 0) test.skip(true, "No approved public pets in this environment.");
   await petLinks.first().click();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -57,6 +57,20 @@ test("pet detail uses the first real public result when available", async ({ pag
 });
 
 test("protected admin routes keep unauthenticated users out", async ({ page }) => {
-  await page.goto("/admin/pets");
-  await expect(page).toHaveURL(/\/login/);
+  await page.goto("/en/admin/pets");
+  await expect(page).toHaveURL(/\/en\/login/);
+});
+
+test("English locale renders localized public routes", async ({ page }) => {
+  for (const route of [
+    { path: "/en", heading: "Let every meeting" },
+    { path: "/en/explore", heading: "Meet pets waiting for a home" },
+    { path: "/en/login", heading: "Welcome back" },
+    { path: "/en/products", heading: "Care materials" },
+    { path: "/en/legal/privacy", heading: "Privacy policy" },
+  ]) {
+    await page.goto(route.path);
+    await expect(page.getByRole("heading", { name: route.heading, exact: false }).first()).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  }
 });

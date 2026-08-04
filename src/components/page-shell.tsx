@@ -1,8 +1,9 @@
 import { clsx } from "clsx";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 type ShellWidth = "sm" | "md" | "lg" | "xl";
 type ShellRole = "public" | "adopter" | "foster" | "admin";
@@ -33,6 +34,7 @@ export function PageShell({
   width?: ShellWidth;
   role?: ShellRole;
 }) {
+  const t = useTranslations("Common");
   return (
     <main
       className={clsx(
@@ -42,7 +44,7 @@ export function PageShell({
       )}
     >
       {breadcrumbs?.length ? (
-        <nav aria-label="麵包屑" className="mb-6 flex flex-wrap gap-2 text-sm text-muted">
+        <nav aria-label={t("breadcrumbs")} className="mb-6 flex flex-wrap gap-2 text-sm text-muted">
           {breadcrumbs.map((item, index) => (
             <span key={item.href} className="flex items-center gap-2">
               {index ? <span aria-hidden="true">/</span> : null}
@@ -70,18 +72,19 @@ export function EmptyState({
   title,
   description,
   action,
-  eyebrow = "NEXT STEP",
+  eyebrow,
 }: {
   title: string;
   description: string;
   action?: { href: string; label: string };
   eyebrow?: string;
 }) {
+  const t = useTranslations("Common");
   return (
     <Card tone="mint" className="mt-10 overflow-hidden p-0">
       <div className="grid sm:grid-cols-[1fr_13rem]">
         <div className="p-6 sm:p-8">
-          <p className="eyebrow">{eyebrow}</p>
+          <p className="eyebrow">{eyebrow ?? t("nextStep")}</p>
           <h2 className="display mt-2 text-2xl">{title}</h2>
           <p className="mt-3 max-w-lg leading-7 text-muted">{description}</p>
           {action ? (

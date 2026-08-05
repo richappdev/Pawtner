@@ -32,6 +32,11 @@ steps:
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPOSITORY}/${_SERVICE_NAME}:${_IMAGE_TAG}
 
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/pawtner-cloud-build@pawtner-app-2026.iam.gserviceaccount.com
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 substitutions:
   _REGION: asia-east1
   _ARTIFACT_REPOSITORY: pawtner-images

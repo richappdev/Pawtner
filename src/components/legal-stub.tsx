@@ -1,4 +1,4 @@
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
 import { useTranslations } from "next-intl";

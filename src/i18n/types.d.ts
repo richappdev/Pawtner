@@ -1,9 +1,8 @@
-import type messages from "../../messages/en.json";
-import type { AppLocale } from "./routing";
+import type messages from "../../messages/zh-TW.json";
 
 declare module "next-intl" {
   interface AppConfig {
-    Locale: AppLocale;
+    Locale: "zh-TW";
     Messages: typeof messages;
   }
 }

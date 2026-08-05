@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { localizePathname, type AppLocale } from "@/i18n/routing";
-
 export const SITE_NAME = "Pawtner";
 export const DEFAULT_TITLE = "Pawtner｜讓每次相遇，都更接近一個家";
 export const DEFAULT_DESCRIPTION =
@@ -38,7 +36,6 @@ export function serializeJsonLd(data: unknown): string {
 }
 
 export function pageMetadata(input: {
-  locale?: AppLocale;
   title: string | { absolute: string };
   description: string;
   path: string;
@@ -47,10 +44,7 @@ export function pageMetadata(input: {
   openGraphType?: "website" | "article";
 }): Metadata {
   const canonicalPath = input.path.startsWith("/") ? input.path : `/${input.path}`;
-  const localizedCanonical = input.locale
-    ? localizePathname(canonicalPath, input.locale)
-    : canonicalPath;
-  const url = absoluteUrl(localizedCanonical);
+  const url = absoluteUrl(canonicalPath);
   const titleText =
     typeof input.title === "string" ? input.title : input.title.absolute;
   const images = input.image ? [{ url: input.image }] : undefined;
@@ -58,22 +52,14 @@ export function pageMetadata(input: {
   return {
     title: input.title,
     description: input.description,
-    alternates: input.locale
-      ? {
-          canonical: localizedCanonical,
-          languages: {
-            "zh-TW": localizePathname(canonicalPath, "zh-TW"),
-            en: localizePathname(canonicalPath, "en"),
-          },
-        }
-      : { canonical: canonicalPath },
+    alternates: { canonical: canonicalPath },
     robots: input.robots,
     openGraph: {
       title: titleText,
       description: input.description,
       url,
       siteName: SITE_NAME,
-      locale: input.locale === "en" ? "en_US" : "zh_TW",
+      locale: "zh_TW",
       type: input.openGraphType ?? "website",
       ...(images ? { images } : {}),
     },
@@ -97,14 +83,12 @@ export function legalPageMetadata(title: string, path: string): Metadata {
 }
 
 export async function localizedLegalPageMetadata(
-  locale: AppLocale,
   titleKey: "adoptionDeclaration" | "aiMedia" | "commerce" | "disputes" | "fosterTerms" | "privacy" | "retention" | "shipping" | "terms",
   path: string,
 ): Promise<Metadata> {
-  const t = await getTranslations({ locale, namespace: "Legal" });
+  const t = await getTranslations("Legal");
   const title = t(titleKey);
   return pageMetadata({
-    locale,
     title,
     description: truncateDescription(t("description", { title })),
     path,
@@ -112,11 +96,10 @@ export async function localizedLegalPageMetadata(
 }
 
 export async function localizedPageMetadata(
-  locale: AppLocale,
   titleKey: "homeTitle" | "exploreTitle" | "productsTitle" | "loginTitle" | "signupTitle" | "applicationsTitle" | "favoritesTitle" | "recommendTitle" | "meTitle",
   path: string,
   options?: { descriptionKey?: "siteDescription" | "applicationsDescription" | "favoritesDescription" | "recommendDescription" | "meDescription"; robots?: Metadata["robots"] },
 ): Promise<Metadata> {
-  const t = await getTranslations({ locale, namespace: "Metadata" });
-  return pageMetadata({ locale, title: t(titleKey), description: t(options?.descriptionKey ?? "siteDescription"), path, robots: options?.robots });
+  const t = await getTranslations("Metadata");
+  return pageMetadata({ title: t(titleKey), description: t(options?.descriptionKey ?? "siteDescription"), path, robots: options?.robots });
 }

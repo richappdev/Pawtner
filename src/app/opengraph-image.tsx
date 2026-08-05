@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Pawtner｜讓每次相遇，都更接近一個家";
+import messages from "../../messages/zh-TW.json";
+
+export const alt = messages.Metadata.siteTitle;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -25,11 +27,11 @@ export default function OpenGraphImage() {
             Pawtner
           </div>
           <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.15, maxWidth: 900 }}>
-            讓每次相遇，都更接近一個家。
+            {messages.Metadata.siteTitle.replace("Pawtner｜", "")}
           </div>
         </div>
         <div style={{ fontSize: 28, color: "#5f6964", maxWidth: 820, lineHeight: 1.4 }}>
-          以透明的生命紀錄與負責任的媒合，陪你找到適合彼此的家人。
+          {messages.Metadata.siteDescription}
         </div>
       </div>
     ),

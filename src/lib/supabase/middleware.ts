@@ -19,11 +19,8 @@ function requiredPublicEnvironment(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBL
   return value;
 }
 
-export async function updateSession(
-  request: NextRequest,
-  initialResponse?: NextResponse,
-): Promise<NextResponse> {
-  const response = initialResponse ?? NextResponse.next({ request });
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  const response = NextResponse.next({ request });
 
   // Phase 1 hosting-only / dual-auth: when Firebase Auth is enabled, skip Supabase cookie refresh.
   // Identity is carried by the Firebase ID token cookie + Authorization header on API calls.

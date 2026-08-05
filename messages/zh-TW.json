@@ -1,10 +1,6 @@
 {
   "Common": {
     "brand": "Pawtner",
-    "language": "語言",
-    "traditionalChinese": "繁體中文",
-    "english": "English",
-    "zhShort": "中", "enShort": "EN",
     "breadcrumbs": "麵包屑",
     "nextStep": "下一步",
     "adoptionProcess": "領養流程",

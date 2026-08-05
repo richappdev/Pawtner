@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { useEffect } from "react";
 import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from "react";
 

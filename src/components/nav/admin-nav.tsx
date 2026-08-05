@@ -2,7 +2,8 @@
 
 import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const items = [
   ["dashboard", "/admin"],

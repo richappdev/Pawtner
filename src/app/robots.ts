@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 
 import { absoluteUrl, getSiteUrl } from "@/lib/seo";
-import { SUPPORTED_LOCALES, localizePathname } from "@/i18n/routing";
 
 export default function robots(): MetadataRoute.Robots {
   const protectedPaths = [
@@ -15,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/api",
         "/api/",
-        ...SUPPORTED_LOCALES.flatMap((locale) => protectedPaths.map((path) => localizePathname(path, locale))),
+        ...protectedPaths,
       ],
     },
     sitemap: absoluteUrl("/sitemap.xml"),

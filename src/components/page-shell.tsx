@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

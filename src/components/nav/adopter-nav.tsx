@@ -1,7 +1,8 @@
 "use client";
 
 import { clsx } from "clsx";
-import { Link, usePathname } from "@/i18n/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { NotificationBadge } from "@/components/nav/notification-badge";
 import { useTranslations } from "next-intl";
 

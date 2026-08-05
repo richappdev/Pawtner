@@ -8,8 +8,8 @@ import { canAccessAdmin, canApproveAi, canManagePet } from "@/lib/auth/permissio
 import { verifyWebhookSignature } from "@/lib/commerce/webhook";
 import { getActiveDonationDestination } from "@/lib/donations/active";
 import { getFlag } from "@/lib/feature-flags";
-import { appLocaleSchema } from "@/i18n/schema";
 import { scoreMatch, type AdopterMatchInput, type PetMatchInput } from "@/lib/matching/score";
+import { profileUpdateSchema } from "@/lib/schemas/profile";
 import { runAdminPetBulkAction } from "@/lib/pets/admin-bulk";
 import { getAdminPet, listAdminPets } from "@/lib/pets/admin-query";
 import { getPublicPet, searchPublicPets } from "@/lib/pets/public-data";
@@ -526,11 +526,7 @@ export async function PATCH(request: Request) {
   if (path === "/api/me") {
     const body = await parseJson(
       request,
-      z.object({
-        display_name: z.string().min(1).max(100).optional(),
-        phone: z.string().max(40).optional(),
-        locale: appLocaleSchema.optional(),
-      }),
+      profileUpdateSchema,
     );
     if ("response" in body) return body.response;
     const { data, error } = await actor.supabase

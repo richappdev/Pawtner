@@ -1,9 +1,9 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { AdminPetActions } from "@/components/admin/admin-pet-actions";

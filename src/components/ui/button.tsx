@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import type { ButtonHTMLAttributes, ComponentProps } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "warm" | "quiet" | "danger";

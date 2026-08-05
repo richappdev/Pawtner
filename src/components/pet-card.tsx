@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 import { PetCover } from "@/components/pet-media";
 import { Badge } from "@/components/ui/badge";

@@ -11,23 +11,17 @@ function leafKeys(value: unknown, prefix = ""): string[] {
 }
 
 describe("translation catalogs", () => {
-  it("provide the same non-empty message keys for zh-TW and en", async () => {
+  it("provides non-empty Traditional Chinese messages", async () => {
     const root = path.resolve(process.cwd(), "messages");
-    const [traditionalChinese, english] = await Promise.all([
-      readFile(path.join(root, "zh-TW.json"), "utf8").then(JSON.parse),
-      readFile(path.join(root, "en.json"), "utf8").then(JSON.parse),
-    ]);
+    const traditionalChinese = await readFile(path.join(root, "zh-TW.json"), "utf8").then(JSON.parse);
 
-    expect(leafKeys(english).sort()).toEqual(leafKeys(traditionalChinese).sort());
-    for (const catalog of [traditionalChinese, english]) {
-      for (const key of leafKeys(catalog)) {
-        const value = key.split(".").reduce<unknown>(
-          (current, part) => (current as Record<string, unknown>)[part],
-          catalog,
-        );
-        expect(value, key).toEqual(expect.any(String));
-        expect((value as string).trim(), key).not.toBe("");
-      }
+    for (const key of leafKeys(traditionalChinese)) {
+      const value = key.split(".").reduce<unknown>(
+        (current, part) => (current as Record<string, unknown>)[part],
+        traditionalChinese,
+      );
+      expect(value, key).toEqual(expect.any(String));
+      expect((value as string).trim(), key).not.toBe("");
     }
   });
 });

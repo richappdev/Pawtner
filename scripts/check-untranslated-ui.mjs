@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-const roots = ["src/app/[locale]", "src/components"];
+const roots = ["src/app", "src/components"];
 const allow = new Set(["Pawtner", "pilot@example.com", "app.developer.rich@gmail.com"]);
 const technical = /^[A-Z0-9][A-Z0-9+_.:/ -]*$/;
 const findings = [];

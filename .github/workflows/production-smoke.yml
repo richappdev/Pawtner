@@ -1,0 +1,32 @@
+name: Production operational smoke
+
+on:
+  schedule:
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pawtner-production-operational-smoke
+  cancel-in-progress: false
+
+jobs:
+  authenticated-smoke:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Verify admin journey and MOA synchronization health
+        run: node scripts/live-admin-pets-smoke.mjs
+        env:
+          PAWTNER_SMOKE_BASE_URL: https://pawtner-tw.web.app
+          PAWTNER_SMOKE_FIREBASE_API_KEY: ${{ secrets.PAWTNER_SMOKE_FIREBASE_API_KEY }}
+          PAWTNER_SMOKE_ADMIN_EMAIL: ${{ secrets.PAWTNER_SMOKE_ADMIN_EMAIL }}
+          PAWTNER_SMOKE_ADMIN_PASSWORD: ${{ secrets.PAWTNER_SMOKE_ADMIN_PASSWORD }}
+          PAWTNER_SMOKE_MOA_HEALTH: "true"
+          PAWTNER_SMOKE_MOA_DRY_RUN: "true"

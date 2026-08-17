@@ -19,6 +19,16 @@ The migration is additive. Disabling either control stops new operational writes
 
 ## Acceptance evidence
 
+The isolated acceptance harness starts local Supabase, the pinned Firebase Auth emulator, seeds only
+synthetic `.invalid` identities, and runs critical browser journeys:
+
+```sh
+npm run test:ui:pilot
+```
+
+CI runs the same adopter, approved-foster, and administrator checks. The harness refuses hosted
+Supabase projects and the production Firebase project.
+
 - Questionnaire v2 saves all structured matching fields and rejects incomplete values.
 - Zero pet evidence yields a null match score and missing-data indicators.
 - Same adopter/pet concurrent submissions produce one active application and one conflict.
@@ -35,3 +45,11 @@ Structured logs contain actor/resource identifiers, transition names, and databa
 ## Rollback
 
 Set the database flag to `false`, then redeploy with the application flag `false`. Leave the migration and historical rows in place. Scheduled notifications remain stored and unavailable; no schema rollback is required.
+
+## Cohort enablement gate
+
+Do not enable the shared database flag until the approved cohort is exactly one foster and three
+invited adopters, support ownership is named, the local role suite passes, and rollback has been
+rehearsed. After enablement, hold the phase in observation for 72 hours; any authorization failure,
+unexpected 5xx, lifecycle conflict spike, or stale/rejected MOA synchronization triggers flag-only
+rollback and pauses invitations.

@@ -1,0 +1,45 @@
+import { spawn } from "node:child_process";
+import { resolve } from "node:path";
+
+const repositoryRoot = resolve(import.meta.dirname, "..");
+const harness = spawn(process.execPath, [resolve(repositoryRoot, "scripts", "dev-local.mjs")], {
+  cwd: repositoryRoot,
+  stdio: ["ignore", "inherit", "inherit"],
+});
+
+async function waitForHarness() {
+  const deadline = Date.now() + 180_000;
+  while (Date.now() < deadline) {
+    if (harness.exitCode !== null) throw new Error(`Pilot harness exited with code ${harness.exitCode}.`);
+    try {
+      const response = await fetch("http://127.0.0.1:3000/login");
+      if (response.ok) return;
+    } catch {
+      // Supabase, Firebase Auth, fixture seeding, and Next.js are still starting.
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
+  }
+  throw new Error("Timed out waiting for the closed-pilot harness.");
+}
+
+try {
+  await waitForHarness();
+  const tests = spawn(
+    process.execPath,
+    [
+      resolve(repositoryRoot, "node_modules", "@playwright", "test", "cli.js"),
+      "test",
+      "tests/ui/pilot-roles.spec.ts",
+    ],
+    {
+      cwd: repositoryRoot,
+      env: { ...process.env, PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3000" },
+      stdio: "inherit",
+    },
+  );
+  process.exitCode = await new Promise((resolveExit) => {
+    tests.once("exit", (code) => resolveExit(code ?? 1));
+  });
+} finally {
+  harness.kill("SIGTERM");
+}

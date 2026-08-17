@@ -77,7 +77,7 @@ const appEnv = {
   STAGING_FIXTURE_PASSWORD: process.env.STAGING_FIXTURE_PASSWORD ?? "PawtnerLocal123!",
 };
 
-const emulator = spawn(npx, ["-y", "firebase-tools@latest", "emulators:start", "--only", "auth", "--project", "pawtner-local", "--config", "firebase.staging.json"], {
+const emulator = spawn(npx, ["-y", "firebase-tools@15.27.0", "emulators:start", "--only", "auth", "--project", "pawtner-local", "--config", "firebase.staging.json"], {
   env: appEnv,
   stdio: "inherit",
   shell: false,

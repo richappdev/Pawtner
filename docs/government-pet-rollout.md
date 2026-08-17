@@ -1,9 +1,25 @@
 # Government pet rollout
 
-The implementation intentionally ships with two release gates closed:
+Government discovery is currently released through both gates:
 
-- `FEATURE_GOVERNMENT_PETS_ENABLED=false` keeps government pets out of Pawtner's public server queries.
-- `pet_sources.public_enabled=false` keeps imported government rows out of the public database read model.
+- `FEATURE_GOVERNMENT_PETS_ENABLED=true` enables government pets in Pawtner server queries.
+- `pet_sources.public_enabled=true` enables approved/published government rows in the public database read model.
+
+Setting either gate to `false` remains the supported emergency rollback.
+
+## Current operational status — 2026-08-17
+
+- Supabase project status is healthy and all repository migrations through
+  `20260805031738_constrain_profile_locale_to_zh_tw` are applied.
+- Edge Function `sync-moa-pets` version 6 is active.
+- Two authenticated manual dry runs succeeded on 2026-08-05 with 8,167 records.
+- The latest successful real sync completed on 2026-07-28 with 8,183 records.
+- Cron job `pawtner-moa-pet-sync` was observed failing because its stored request body was invalid JSON
+  (`{trigger:cron}`). Forward migration `20260817030136_repair_moa_cron_schedule` safely replaces the
+  named job through `cron.unschedule` and `cron.schedule`, without directly editing `cron.job`.
+- After deploying the repair, observe one scheduled real run before treating the gate as closed. The
+  daily authenticated workflow `.github/workflows/production-smoke.yml` enforces a 26-hour freshness
+  limit and rejects failed, rejected, empty, or materially reduced feeds.
 
 ## Required secrets
 
@@ -19,11 +35,11 @@ Also store the Supabase project base URL in Vault as `project_url`. The migratio
 the migration, create the job from the Supabase Cron dashboard using the same schedule and the
 `sync-moa-pets` Edge Function.
 
-## Deployment sequence
+## Initial deployment sequence
 
 1. Apply the database migration while both release gates remain off.
 2. Deploy `sync-moa-pets` with its function-local `deno.json`.
-3. From `/admin/pets`, run **乾跑** and inspect the newest `pet_sync_runs` row.
+3. From `/admin/pets`, run **模擬測試** and inspect the newest `pet_sync_runs` row.
 4. Run one real sync. Compare record, species, and shelter totals with the MOA response.
 5. Inspect government records and external images in the admin UI.
 6. On staging, set `pet_sources.public_enabled=true` for `moa-animal-adoption`, then set

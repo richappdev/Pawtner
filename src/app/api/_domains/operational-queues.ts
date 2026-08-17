@@ -27,7 +27,14 @@ export async function getFosterApplications(request: Request, applicationId?: st
   if (!session) return jsonError("Authentication required.", 401);
   const { data: foster, error: fosterError } = await session.supabase.from("foster_profiles")
     .select("id,status").eq("user_id", session.actor.id).maybeSingle();
-  if (fosterError) return jsonError("Unable to verify foster access.", 500);
+  if (fosterError) {
+    logger.warn("adoption.foster_access.load_failed", {
+      actorId: session.actor.id,
+      code: fosterError.code,
+      message: fosterError.message,
+    });
+    return jsonError("Unable to verify foster access.", 500);
+  }
   if (!foster || foster.status !== "approved" || !session.actor.roles.includes("foster")) {
     return jsonError("An approved foster profile is required.", 403, { onboardingStatus: foster?.status ?? "missing" });
   }
@@ -35,7 +42,14 @@ export async function getFosterApplications(request: Request, applicationId?: st
   if (rawCursor && !cursor) return jsonError("Invalid pagination cursor.", 422);
   const { data: pets, error: petError } = await session.supabase.from("pets").select("id,name")
     .eq("foster_profile_id", foster.id);
-  if (petError) return jsonError("Unable to load foster pets.", 500);
+  if (petError) {
+    logger.warn("adoption.foster_pets.load_failed", {
+      actorId: session.actor.id,
+      code: petError.code,
+      message: petError.message,
+    });
+    return jsonError("Unable to load foster pets.", 500);
+  }
   const petIds = (pets ?? []).map((pet) => pet.id);
   if (!petIds.length) return jsonOk(applicationId ? null : { items: [], nextCursor: null, pets: [] });
   let query = session.supabase.from("adoption_applications").select(REVIEWER_APPLICATION_SELECT)
@@ -54,7 +68,14 @@ export async function getFosterApplications(request: Request, applicationId?: st
     if (cursor) query = query.or(createdAtCursorFilter(cursor));
   }
   const { data: rawData, error } = await query;
-  if (error) return jsonError("Unable to load foster applications.", 500);
+  if (error) {
+    logger.warn("adoption.foster_applications.load_failed", {
+      actorId: session.actor.id,
+      code: error.code,
+      message: error.message,
+    });
+    return jsonError("Unable to load foster applications.", 500);
+  }
   const data = (rawData ?? []) as unknown as Array<Record<string, unknown> & { id: string; pet_id: string }>;
   if (applicationId) return data[0] ? jsonOk({ ...data[0], pet: pets?.find((pet) => pet.id === data[0].pet_id) }) : jsonError("Application not found.", 404);
   const rows = data;
@@ -72,7 +93,13 @@ export async function getAdminApplications(request: Request, applicationId?: str
   if (unavailable) return unavailable;
   const session = await getSessionActor();
   if (!session) return jsonError("Authentication required.", 401);
-  if (!isStaff(session.actor.roles)) return jsonError("Staff access is required.", 403);
+  if (!isStaff(session.actor.roles)) {
+    logger.warn("adoption.admin_applications.forbidden", {
+      actorId: session.actor.id,
+      roles: session.actor.roles,
+    });
+    return jsonError("Staff access is required.", 403);
+  }
   const { params, limit, rawCursor, cursor } = pageParams(request);
   if (rawCursor && !cursor) return jsonError("Invalid pagination cursor.", 422);
   let query = session.supabase.from("adoption_applications").select(REVIEWER_APPLICATION_SELECT)
@@ -87,7 +114,14 @@ export async function getAdminApplications(request: Request, applicationId?: str
     if (cursor) query = query.or(createdAtCursorFilter(cursor));
   }
   const { data: rawData, error } = await query;
-  if (error) return jsonError("Unable to load admin applications.", 500);
+  if (error) {
+    logger.warn("adoption.admin_applications.load_failed", {
+      actorId: session.actor.id,
+      code: error.code,
+      message: error.message,
+    });
+    return jsonError("Unable to load admin applications.", 500);
+  }
   const rows = (rawData ?? []) as unknown as Array<Record<string, unknown> & { id: string }>;
   if (applicationId) return rows[0] ? jsonOk(rows[0]) : jsonError("Application not found.", 404);
   const visible = rows.slice(0, limit);

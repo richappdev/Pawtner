@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest";
 import { createLocalSupabaseAccessToken } from "./local-supabase-token";
 
 describe("local Supabase access token", () => {
-  it("mints a five-minute authenticated token for the Firebase subject", () => {
-    const token = createLocalSupabaseAccessToken("firebase-user-1", "local-secret", 1_700_000_000);
+  it("mints a five-minute authenticated token for the mapped app user", () => {
+    const appUserId = "10000000-0000-4000-8000-000000000001";
+    const token = createLocalSupabaseAccessToken(appUserId, "local-secret", 1_700_000_000);
     const [header, payload, signature] = token.split(".");
 
     expect(JSON.parse(Buffer.from(header, "base64url").toString("utf8"))).toEqual({
@@ -19,7 +20,7 @@ describe("local Supabase access token", () => {
       iat: 1_700_000_000,
       iss: "supabase",
       role: "authenticated",
-      sub: "firebase-user-1",
+      sub: appUserId,
     });
     expect(signature).toBe(
       createHmac("sha256", "local-secret").update(`${header}.${payload}`).digest("base64url"),

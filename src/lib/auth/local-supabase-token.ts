@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 
 import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
 
@@ -7,7 +8,7 @@ function encode(value: object): string {
 }
 
 export function createLocalSupabaseAccessToken(
-  firebaseUid: string,
+  appUserId: string,
   secret: string,
   issuedAt = Math.floor(Date.now() / 1_000),
 ): string {
@@ -18,7 +19,7 @@ export function createLocalSupabaseAccessToken(
     iat: issuedAt,
     iss: "supabase",
     role: "authenticated",
-    sub: firebaseUid,
+    sub: appUserId,
   });
   const unsigned = `${header}.${payload}`;
   const signature = createHmac("sha256", secret).update(unsigned).digest("base64url");
@@ -49,5 +50,21 @@ export async function toSupabaseAccessToken(firebaseToken: string): Promise<stri
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) throw new Error("Missing required environment variable: SUPABASE_JWT_SECRET");
   const decoded = await verifyFirebaseIdToken(firebaseToken);
-  return createLocalSupabaseAccessToken(decoded.uid, secret);
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error("Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY");
+  }
+  const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await service
+    .from("external_identities")
+    .select("user_id")
+    .eq("provider", "firebase")
+    .eq("subject", decoded.uid)
+    .maybeSingle();
+  if (error || !data?.user_id) {
+    throw error ?? new Error("Firebase identity is not provisioned in local Supabase.");
+  }
+  return createLocalSupabaseAccessToken(data.user_id, secret);
 }

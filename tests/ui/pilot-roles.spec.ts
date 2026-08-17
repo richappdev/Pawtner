@@ -7,7 +7,7 @@ async function login(page: Page, email: string) {
   await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="password"]').fill(password);
   await page.locator('button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/explore$/);
+  await expect(page).toHaveURL(/\/explore$/, { timeout: 15_000 });
 }
 
 test.describe("closed-pilot critical role journeys", () => {

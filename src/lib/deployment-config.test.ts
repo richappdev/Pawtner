@@ -42,6 +42,7 @@ describe("Cloud Run deployment secrets", () => {
 
     expect(contents).toContain('const appOrigin = "http://localhost:3000"');
     expect(contents).toContain("PLAYWRIGHT_BASE_URL: appOrigin");
+    expect(contents).toContain('"--workers=1"');
   });
 
   it("uses the Firebase Hosting session cookie in the authenticated smoke", () => {

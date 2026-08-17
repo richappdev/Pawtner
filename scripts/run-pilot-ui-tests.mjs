@@ -33,6 +33,7 @@ try {
       resolve(repositoryRoot, "node_modules", "@playwright", "test", "cli.js"),
       "test",
       "tests/ui/pilot-roles.spec.ts",
+      "--workers=1",
     ],
     {
       cwd: repositoryRoot,

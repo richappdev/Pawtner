@@ -8,7 +8,9 @@ const harness = spawn(process.execPath, [resolve(repositoryRoot, "scripts", "dev
 });
 
 async function waitForHarness() {
-  const deadline = Date.now() + 180_000;
+  // A fresh CI runner may need several minutes to pull Supabase containers and
+  // download the pinned Firebase CLI before Next.js can start.
+  const deadline = Date.now() + 360_000;
   while (Date.now() < deadline) {
     if (harness.exitCode !== null) throw new Error(`Pilot harness exited with code ${harness.exitCode}.`);
     try {

@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
+const appOrigin = "http://localhost:3000";
 const harness = spawn(process.execPath, [resolve(repositoryRoot, "scripts", "dev-local.mjs")], {
   cwd: repositoryRoot,
   stdio: ["ignore", "inherit", "inherit"],
@@ -14,7 +15,7 @@ async function waitForHarness() {
   while (Date.now() < deadline) {
     if (harness.exitCode !== null) throw new Error(`Pilot harness exited with code ${harness.exitCode}.`);
     try {
-      const response = await fetch("http://127.0.0.1:3000/login");
+      const response = await fetch(`${appOrigin}/login`);
       if (response.ok) return;
     } catch {
       // Supabase, Firebase Auth, fixture seeding, and Next.js are still starting.
@@ -35,7 +36,9 @@ try {
     ],
     {
       cwd: repositoryRoot,
-      env: { ...process.env, PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3000" },
+      // Match the hostname reported by Next.js. Mixing localhost and 127.0.0.1
+      // causes Next.js 16 to block development resources as cross-origin.
+      env: { ...process.env, PLAYWRIGHT_BASE_URL: appOrigin },
       stdio: "inherit",
     },
   );

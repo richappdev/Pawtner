@@ -34,6 +34,16 @@ describe("Cloud Run deployment secrets", () => {
     expect(contents).not.toContain("firebase-tools@latest");
   });
 
+  it("keeps the pilot browser on the Next.js development origin", () => {
+    const contents = readFileSync(
+      resolve(process.cwd(), "scripts/run-pilot-ui-tests.mjs"),
+      "utf8",
+    );
+
+    expect(contents).toContain('const appOrigin = "http://localhost:3000"');
+    expect(contents).toContain("PLAYWRIGHT_BASE_URL: appOrigin");
+  });
+
   it("uses the Firebase Hosting session cookie in the authenticated smoke", () => {
     const contents = readFileSync(
       resolve(process.cwd(), "scripts/live-admin-pets-smoke.mjs"),

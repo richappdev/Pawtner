@@ -35,7 +35,14 @@ export async function getAdopterApplications(request: Request) {
   if (rawCursor && !cursor) return jsonError("Invalid pagination cursor.", 422);
   if (cursor) query = query.or(createdAtCursorFilter(cursor));
   const { data, error } = await query;
-  if (error) return jsonError("Unable to load applications.", 500);
+  if (error) {
+    logger.warn("adoption.applications.load_failed", {
+      actorId: session.actor.id,
+      code: error.code,
+      message: error.message,
+    });
+    return jsonError("Unable to load applications.", 500);
+  }
   const rows = (data ?? []) as unknown as Array<Record<string, unknown> & { id: string; pet_id: string }>;
   const visible = rows.slice(0, limit);
   const items = await Promise.all(visible.map(async (application) => ({

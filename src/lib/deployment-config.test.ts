@@ -3,16 +3,19 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const cloudRunWorkflows = [
-  ".github/workflows/production.yml",
-  ".github/workflows/staging.yml",
-];
-
 describe("Cloud Run deployment secrets", () => {
-  it.each(cloudRunWorkflows)("mounts the MOA sync secret in %s", (workflow) => {
-    const contents = readFileSync(resolve(process.cwd(), workflow), "utf8");
+  it("mounts the MOA sync secret only in production", () => {
+    const production = readFileSync(
+      resolve(process.cwd(), ".github/workflows/production.yml"),
+      "utf8",
+    );
+    const staging = readFileSync(
+      resolve(process.cwd(), ".github/workflows/staging.yml"),
+      "utf8",
+    );
 
-    expect(contents).toContain("MOA_SYNC_SECRET=MOA_SYNC_SECRET:latest");
+    expect(production).toContain("MOA_SYNC_SECRET=MOA_SYNC_SECRET:latest");
+    expect(staging).not.toContain("MOA_SYNC_SECRET=MOA_SYNC_SECRET:latest");
   });
 
   it("runs an authenticated production operational smoke on a schedule", () => {

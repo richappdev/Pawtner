@@ -109,6 +109,70 @@ function inferRegion(address: string | null, place: string | null): string | nul
   return match?.[1] ?? null;
 }
 
+const GOVERNMENT_ADOPTION_LIST_URL =
+  "https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt";
+
+const SHELTER_USER_TAGS: Readonly<Record<string, string>> = {
+  "新北市政府動物保護防疫處": "AAAAG",
+  "新北市新店區公立動物之家": "AAACG",
+  "新北市板橋區公立動物之家": "AAADG",
+  "新北市中和區公立動物之家": "AAAEG",
+  "新北市淡水區公立動物之家": "AAAFG",
+  "新北市瑞芳區公立動物之家": "AAAGG",
+  "新北市五股區公立動物之家": "AAAHG",
+  "新北市八里區公立動物之家": "AAAIG",
+  "新北市三芝區公立動物之家": "AAAJG",
+  "宜蘭縣流浪動物中途之家": "BAAAG",
+  "桃園市動物保護教育園區": "CAAAG",
+  "新竹縣動物保護教育園區": "DAAAG",
+  "苗栗縣動物保護教育園區": "EAAAG",
+  "臺中市動物之家南屯園區": "FAAAG",
+  "臺中市動物之家后里園區": "FAABG",
+  "彰化縣流浪狗中途之家臨時收容所": "GAAAG",
+  "南投縣公立動物收容所": "HAAAG",
+  "雲林縣流浪動物收容所": "IAAAG",
+  "嘉義縣動物保護教育園區": "JAAAG",
+  "高雄市壽山動物保護教育園區": "LAAAG",
+  "高雄市燕巢動物保護關愛園區": "LAABG",
+  "屏東縣公立犬貓中途之家": "MAAAG",
+  "屏東縣動物之家": "MAABG",
+  "臺東縣動物收容中心": "NAAAG",
+  "花蓮縣狗貓躍動園區": "OAAAG",
+  "澎湖縣流浪動物收容中心": "PAAAG",
+  "基隆市寵物銀行": "QAAAG",
+  "新竹市動物保護教育園區": "RAAAG",
+  "嘉義市動物保護教育園區": "TAAAG",
+  "臺南市動物之家灣裡站": "UAAAG",
+  "臺南市動物之家善化站": "UAABG",
+  "臺北市動物之家": "VAAAG",
+  "連江縣動物之家": "XAAAG",
+  "金門縣動物收容中心": "YAAAG",
+};
+
+function base64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+export function buildMoaOfficialUrl(
+  externalSubId: string | null,
+  shelterName: string | null,
+): string {
+  if (!externalSubId) return GOVERNMENT_ADOPTION_LIST_URL;
+
+  const userTag = externalSubId.match(/^[A-Z]{4}G/u)?.[0]
+    ?? (shelterName ? SHELTER_USER_TAGS[shelterName] : undefined);
+  if (!userTag) return GOVERNMENT_ADOPTION_LIST_URL;
+
+  const url = new URL("https://www.pet.gov.tw/AnimalApp/AnnounceSingle.aspx");
+  url.searchParams.set("PageType", "Adopt");
+  url.searchParams.set("AcNum", base64(externalSubId));
+  url.searchParams.set("UT", base64(userTag));
+  return url.toString();
+}
+
 function validGovernmentImage(value: unknown): string | null {
   const url = text(value);
   if (!url) return null;
@@ -255,7 +319,7 @@ export async function mapMoaRecord(
     shelterName: normalizedForHash.shelterName,
     shelterAddress,
     shelterPhone: normalizedForHash.shelterPhone,
-    officialUrl: `https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt&AnimalId=${encodeURIComponent(externalId)}`,
+    officialUrl: buildMoaOfficialUrl(externalSubId, shelterName),
     adoptionOpenAt,
     sourceCreatedAt: normalizedForHash.sourceCreatedAt,
     sourceUpdatedAt: normalizedForHash.sourceUpdatedAt,

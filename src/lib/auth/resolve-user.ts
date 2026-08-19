@@ -2,6 +2,7 @@ import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 
 import { isFirebaseAuthEnabled } from "@/lib/auth/firebase-flags";
 import { readFirebaseIdTokenFromRequest } from "@/lib/auth/firebase-token";
+import { toSupabaseAccessToken } from "@/lib/auth/local-supabase-token";
 import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
 import { logger } from "@/lib/logging";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
@@ -71,7 +72,7 @@ export async function resolveAppUser(request?: Request): Promise<AppUser | null>
   }
 }
 
-export function createUserScopedSupabase(accessToken?: string | null) {
+export async function createUserScopedSupabase(accessToken?: string | null) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -83,12 +84,14 @@ export function createUserScopedSupabase(accessToken?: string | null) {
     return createSupabaseJsClient(url, key);
   }
 
+  const supabaseAccessToken = await toSupabaseAccessToken(accessToken);
+
   return createSupabaseJsClient(url, key, {
     global: {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${supabaseAccessToken}`,
       },
     },
-    accessToken: async () => accessToken,
+    accessToken: async () => supabaseAccessToken,
   });
 }

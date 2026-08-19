@@ -6,6 +6,7 @@ import {
   FIREBASE_ID_TOKEN_COOKIE_NAMES,
   isFirebaseAuthEnabled,
 } from "@/lib/auth/firebase-flags";
+import { toSupabaseAccessToken } from "@/lib/auth/local-supabase-token";
 
 function requiredEnvironment(
   name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "SUPABASE_SERVICE_ROLE_KEY",
@@ -35,7 +36,7 @@ export async function createClient() {
     : undefined;
 
   if (firebaseToken) {
-    const token = decodeURIComponent(firebaseToken);
+    const token = await toSupabaseAccessToken(decodeURIComponent(firebaseToken));
     return createSupabaseClient(requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"), publicAnonKey(), {
       global: {
         headers: { Authorization: `Bearer ${token}` },

@@ -1,0 +1,134 @@
+name: Daily smoke test
+
+on:
+  schedule:
+    # GitHub Actions cron is UTC. 01:00 UTC is 09:00 in Asia/Taipei.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pawtner-daily-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Smoke ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: staging
+            base_url: https://pawtner-tw-staging.web.app
+          - environment: production
+            base_url: https://pawtner-tw.web.app
+    env:
+      SMOKE_ENVIRONMENT: ${{ matrix.environment }}
+      SMOKE_BASE_URL: ${{ matrix.base_url }}
+
+    steps:
+      - name: Check deployed application
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          smoke_dir="$RUNNER_TEMP/pawtner-smoke-$SMOKE_ENVIRONMENT"
+          mkdir -p "$smoke_dir"
+
+          request() {
+            local path="$1"
+            local output="$2"
+            local status
+
+            if ! status="$(curl \
+              --silent \
+              --show-error \
+              --location \
+              --fail-with-body \
+              --retry 3 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 30 \
+              --output "$output" \
+              --write-out "%{http_code}" \
+              "$SMOKE_BASE_URL$path")"; then
+              echo "::error title=$SMOKE_ENVIRONMENT smoke failed::$path request failed (last HTTP status: ${status:-unavailable})"
+              if [[ -s "$output" ]]; then
+                echo "Response body:"
+                head -c 1000 "$output"
+                echo
+              fi
+              exit 1
+            fi
+
+            if [[ "$status" != "200" ]]; then
+              echo "::error title=$SMOKE_ENVIRONMENT smoke failed::$path returned HTTP $status; expected 200"
+              exit 1
+            fi
+
+            echo "PASS [$SMOKE_ENVIRONMENT] $path returned HTTP 200"
+          }
+
+          request "/api/health" "$smoke_dir/health.json"
+          if ! jq -e '.ok == true and .service == "pawtner"' "$smoke_dir/health.json" >/dev/null; then
+            echo "::error title=$SMOKE_ENVIRONMENT smoke failed::/api/health returned an unexpected payload"
+            jq . "$smoke_dir/health.json" || head -c 1000 "$smoke_dir/health.json"
+            exit 1
+          fi
+          echo "PASS [$SMOKE_ENVIRONMENT] /api/health payload is valid"
+
+          request "/" "$smoke_dir/home.html"
+          if ! grep -q "Pawtner" "$smoke_dir/home.html"; then
+            echo "::error title=$SMOKE_ENVIRONMENT smoke failed::/ did not contain the Pawtner marker"
+            exit 1
+          fi
+          echo "PASS [$SMOKE_ENVIRONMENT] / contains the Pawtner marker"
+
+          request "/explore" "$smoke_dir/explore.html"
+
+          request "/api/pets?limit=1" "$smoke_dir/pets.json"
+          if ! jq -e '.data.items | type == "array"' "$smoke_dir/pets.json" >/dev/null; then
+            echo "::error title=$SMOKE_ENVIRONMENT smoke failed::/api/pets?limit=1 returned an unexpected payload"
+            jq . "$smoke_dir/pets.json" || head -c 1000 "$smoke_dir/pets.json"
+            exit 1
+          fi
+          echo "PASS [$SMOKE_ENVIRONMENT] /api/pets?limit=1 returned a data.items array"
+
+          if ! admin_status="$(curl \
+            --silent \
+            --show-error \
+            --location \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --output "$smoke_dir/admin-pets.json" \
+            --write-out "%{http_code}" \
+            "$SMOKE_BASE_URL/api/admin/pets")"; then
+            echo "::error title=$SMOKE_ENVIRONMENT smoke failed::Unauthenticated /api/admin/pets request failed (last HTTP status: ${admin_status:-unavailable})"
+            exit 1
+          fi
+          if [[ "$admin_status" != "401" && "$admin_status" != "403" ]]; then
+            echo "::error title=$SMOKE_ENVIRONMENT smoke failed::Unauthenticated /api/admin/pets returned HTTP $admin_status; expected 401 or 403"
+            if [[ -s "$smoke_dir/admin-pets.json" ]]; then
+              head -c 1000 "$smoke_dir/admin-pets.json"
+              echo
+            fi
+            exit 1
+          fi
+          echo "PASS [$SMOKE_ENVIRONMENT] unauthenticated /api/admin/pets is blocked with HTTP $admin_status"
+
+          {
+            echo "### ${SMOKE_ENVIRONMENT^} smoke test passed"
+            echo
+            echo "- Base URL: $SMOKE_BASE_URL"
+            echo "- Health API: valid"
+            echo "- Home page: available"
+            echo "- Explore page: available"
+            echo "- Public pets API: valid"
+            echo "- Admin pets API: blocks unauthenticated access"
+          } >> "$GITHUB_STEP_SUMMARY"

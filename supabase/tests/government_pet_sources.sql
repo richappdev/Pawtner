@@ -1,5 +1,40 @@
 begin;
-select plan(41);
+select plan(45);
+
+select has_function(
+  'app_private',
+  'ensure_moa_pet_sync_cron',
+  array['boolean'],
+  'the MOA Cron repair helper exists outside the Data API schemas'
+);
+
+select lives_ok(
+  $test$
+    select app_private.ensure_moa_pet_sync_cron(true)
+  $test$,
+  'the MOA Cron schedule can be repaired without an outbound request'
+);
+
+select is(
+  (
+    select schedule
+    from cron.job
+    where jobname = 'pawtner-moa-pet-sync'
+  ),
+  '30 10 * * *',
+  'the MOA sync remains scheduled daily at 10:30 UTC'
+);
+
+select ok(
+  (
+    select command like '%body := ''{"trigger":"cron"}''::jsonb%'
+      and command like '%/functions/v1/sync-moa-pets%'
+      and command like '%x-sync-secret%'
+    from cron.job
+    where jobname = 'pawtner-moa-pet-sync'
+  ),
+  'the scheduled command sends valid JSON to the authenticated sync endpoint'
+);
 
 select has_column('public', 'pets', 'source_type', 'pets have a source discriminator');
 select has_column('public', 'pets', 'rabies_vaccinated', 'pets track rabies vaccination');

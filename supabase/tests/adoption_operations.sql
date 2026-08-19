@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(26);
 
 select has_table('public', 'adopter_questionnaire_responses', 'versioned adopter responses exist');
 select has_table('public', 'pet_match_requirements', 'structured pet requirements exist');
@@ -59,6 +59,14 @@ select ok(
   not has_table_privilege('authenticated', 'public.adoption_applications', 'update'),
   'clients cannot update lifecycle fields directly'
 );
+select ok(has_table_privilege('authenticated', 'public.user_roles', 'select'), 'actors can read RLS-scoped roles');
+select ok(has_table_privilege('authenticated', 'public.foster_profiles', 'select'), 'actors can read RLS-scoped foster profiles');
+select ok(has_table_privilege('authenticated', 'public.pets', 'select'), 'actors can read RLS-scoped pets');
+select ok(has_table_privilege('authenticated', 'public.adoption_applications', 'select'), 'actors can read RLS-scoped applications');
+select ok(has_table_privilege('authenticated', 'public.application_answers', 'select'), 'actors can read RLS-scoped application answers');
+select ok(has_table_privilege('authenticated', 'public.application_status_history', 'select'), 'actors can read RLS-scoped application history');
+select ok(has_table_privilege('authenticated', 'public.application_private_notes', 'select'), 'reviewers can read RLS-scoped private notes');
+select ok(has_table_privilege('authenticated', 'public.adoption_followups', 'select'), 'actors can read RLS-scoped follow-ups');
 select results_eq(
   $$select enabled from public.feature_flags where key = 'closed_pilot_adoption_operations'$$,
   array[false],

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveAppUser } from "@/lib/auth/resolve-user";
+import { logger } from "@/lib/logging";
 import type { PermissionActor } from "@/lib/auth/permissions";
 import type { AppRole } from "@/lib/types/roles";
 
@@ -12,7 +13,14 @@ export async function getSessionActor(): Promise<{
   if (!appUser) return null;
 
   const supabase = await createClient();
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", appUser.id);
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", appUser.id);
+  if (error) {
+    logger.warn("auth.session_roles.failure", {
+      userId: appUser.id,
+      code: error.code,
+      message: error.message,
+    });
+  }
 
   return {
     supabase,

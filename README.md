@@ -19,17 +19,28 @@ Canonical project index: [Pawtner Project Home](https://app.notion.com/p/104a418
 
 ## Current status
 
-Closed-pilot adoption operations are implemented behind default-off application and database flags.
-See [the rollout runbook](docs/closed-pilot-adoption-operations.md) for migration order, staging fixtures,
-role acceptance, safe observability, and flag-only rollback.
+Closed-pilot adoption operations are deployed with the application/API flag enabled and the shared
+database lifecycle flag disabled. See [the rollout runbook](docs/closed-pilot-adoption-operations.md)
+for migration order, local fixtures, role acceptance, safe observability, and flag-only rollback.
 
-Reviewed on **2026-08-03** against synchronized `main` commit `a4eb6be` plus the current worktree:
+Reviewed on **2026-08-17** against `develop` commit `742fd67` plus the current worktree:
 
 - Firebase Hosting serves the production site through the independent Cloud Run service.
 - Firebase Auth is enabled for all users; the legacy Supabase Auth client path remains only for the documented rollback window.
 - Government discovery, controlled publication, Admin Pets, dashboard counts, and admin photo galleries are implemented.
+- Versioned questionnaires, favorites, recommendations, application queues/transitions, private notes,
+  notifications, and 7/30/90-day follow-ups are implemented behind the database lifecycle flag.
+- Production and frontend-only staging are healthy on Cloud Run and both use Firebase Auth for all users.
+- The final product routes are Taiwan-only and unprefixed; the profile locale is constrained to `zh-TW`.
 - Site-wide SEO and consent-gated Firebase Analytics/Performance foundations are implemented. Observability remains disabled until the console setup, privacy review, and staging verification in `docs/firebase-observability.md` are complete.
-- The closed pilot is **not ready to open**: non-pet admin queues, adopter/foster end-to-end workflows, legal approval, environment/release-switch verification, production auth smoke evidence, alerts, fixtures, and role-based acceptance remain open.
+- The closed pilot is **not ready to open**: Orders/Reports/AI admin queues, legal approval, database-flag
+  enablement, local role-based acceptance, rollback rehearsal, alerting, and invited-cohort/support-owner
+  sign-off remain open.
+- A forward-only migration repairs the malformed MOA Cron request, and the authenticated operational
+  smoke now rejects stale, failed, rejected, empty, or materially reduced feeds. Deployment and one
+  observed scheduled run remain required. See [the government rollout runbook](docs/government-pet-rollout.md).
+- Critical adopter, foster, and administrator journeys run against isolated Supabase and Firebase Auth
+  emulators with `npm run test:ui:pilot`; CI runs the same harness.
 
 ## Repositories
 

@@ -1,8 +1,14 @@
-const BASE = "https://pawtner-web--pawtner-app-2026.asia-east1.hosted.app";
+import { assessMoaDryRun, assessMoaSyncHistory } from "./moa-sync-health.mjs";
+
+const BASE = process.env.PAWTNER_SMOKE_BASE_URL ??
+  "https://pawtner-web--pawtner-app-2026.asia-east1.hosted.app";
 const API_KEY = process.env.PAWTNER_SMOKE_FIREBASE_API_KEY;
 const EMAIL = process.env.PAWTNER_SMOKE_ADMIN_EMAIL;
 const PASSWORD = process.env.PAWTNER_SMOKE_ADMIN_PASSWORD;
-const COOKIE = "pawtner_firebase_id_token";
+const CHECK_MOA_DRY_RUN = process.env.PAWTNER_SMOKE_MOA_DRY_RUN === "true";
+const CHECK_MOA_HEALTH = process.env.PAWTNER_SMOKE_MOA_HEALTH === "true";
+const MOA_DRY_RUN_ONLY = process.env.PAWTNER_SMOKE_MOA_DRY_RUN_ONLY === "true";
+const COOKIE = "__session";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -50,6 +56,43 @@ async function main() {
   assert(petsRes.ok, `GET /api/admin/pets (${petsRes.status}) ${JSON.stringify(petsBody).slice(0, 300)}`);
   assert(Array.isArray(petsBody.data), "Admin pets payload is an array");
   console.log(`INFO: pets count = ${petsBody.data.length}`);
+
+  let moaHistory;
+  if (CHECK_MOA_HEALTH || CHECK_MOA_DRY_RUN) {
+    const historyRes = await fetch(`${BASE}/api/admin/pet-sources/moa/sync`, {
+      headers: { Authorization: `Bearer ${idToken}`, Cookie: cookieHeader },
+    });
+    const historyBody = await historyRes.json().catch(() => ({}));
+    assert(historyRes.ok, `MOA sync history (${historyRes.status}) ${JSON.stringify(historyBody).slice(0, 500)}`);
+    moaHistory = historyBody.data;
+
+    if (CHECK_MOA_HEALTH) {
+      const health = assessMoaSyncHistory(moaHistory);
+      console.log(`INFO: MOA real sync age = ${health.ageHours}h; records = ${health.fetchedCount}`);
+    }
+  }
+
+  // Optional production-safe MOA synchronization check
+  if (CHECK_MOA_DRY_RUN) {
+    const syncRes = await fetch(`${BASE}/api/admin/pet-sources/moa/sync`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        Cookie: cookieHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ dryRun: true }),
+    });
+    const syncBody = await syncRes.json().catch(() => ({}));
+    assert(syncRes.ok, `MOA dry-run (${syncRes.status}) ${JSON.stringify(syncBody).slice(0, 500)}`);
+    const dryRun = assessMoaDryRun(syncBody.data, moaHistory?.source?.last_successful_record_count);
+    console.log(`INFO: MOA dry-run records = ${dryRun.completeCount}`);
+
+    if (MOA_DRY_RUN_ONLY) {
+      console.log("\n=== MOA live check passed ===");
+      return;
+    }
+  }
 
   // 4) Unauthenticated should be blocked
   const deniedRes = await fetch(`${BASE}/api/admin/pets`);

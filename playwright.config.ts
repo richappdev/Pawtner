@@ -9,8 +9,8 @@ export default defineConfig({
   workers: 4,
   timeout: 30_000,
   use: {
-    baseURL: "http://127.0.0.1:3100",
-    channel: "msedge",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100",
+    channel: process.env.CI ? undefined : "msedge",
     trace: "retain-on-failure",
   },
 });

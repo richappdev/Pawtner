@@ -48,8 +48,8 @@ function waitForPort(port, timeoutMs = 60_000) {
 run(["supabase", "start"]);
 run(["supabase", "db", "reset", "--local", "--yes"]);
 const local = parseEnv(capture(["supabase", "status", "-o", "env"]));
-if (!local.ANON_KEY || !local.SERVICE_ROLE_KEY) {
-  throw new Error("Supabase CLI status did not return ANON_KEY and SERVICE_ROLE_KEY");
+if (!local.ANON_KEY || !local.SERVICE_ROLE_KEY || !local.JWT_SECRET) {
+  throw new Error("Supabase CLI status did not return ANON_KEY, SERVICE_ROLE_KEY, and JWT_SECRET");
 }
 const appEnv = {
   ...process.env,
@@ -60,6 +60,7 @@ const appEnv = {
   NEXT_PUBLIC_SUPABASE_URL: local.API_URL ?? "http://127.0.0.1:54321",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: local.ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: local.SERVICE_ROLE_KEY,
+  SUPABASE_JWT_SECRET: local.JWT_SECRET,
   NEXT_PUBLIC_FIREBASE_API_KEY: "demo-key",
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "pawtner-local.firebaseapp.com",
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: "pawtner-local",
@@ -77,7 +78,7 @@ const appEnv = {
   STAGING_FIXTURE_PASSWORD: process.env.STAGING_FIXTURE_PASSWORD ?? "PawtnerLocal123!",
 };
 
-const emulator = spawn(npx, ["-y", "firebase-tools@latest", "emulators:start", "--only", "auth", "--project", "pawtner-local", "--config", "firebase.staging.json"], {
+const emulator = spawn(npx, ["-y", "firebase-tools@15.27.0", "emulators:start", "--only", "auth", "--project", "pawtner-local", "--config", "firebase.staging.json"], {
   env: appEnv,
   stdio: "inherit",
   shell: false,

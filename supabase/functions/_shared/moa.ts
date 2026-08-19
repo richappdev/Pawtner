@@ -112,7 +112,7 @@ function inferRegion(address: string | null, place: string | null): string | nul
 const GOVERNMENT_ADOPTION_LIST_URL =
   "https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt";
 
-const SHELTER_USER_TAGS: Readonly<Record<string, string>> = {
+const SHELTER_UNIT_TAGS: Readonly<Record<string, string>> = {
   "新北市政府動物保護防疫處": "AAAAG",
   "新北市新店區公立動物之家": "AAACG",
   "新北市板橋區公立動物之家": "AAADG",
@@ -162,14 +162,16 @@ export function buildMoaOfficialUrl(
 ): string {
   if (!externalSubId) return GOVERNMENT_ADOPTION_LIST_URL;
 
-  const userTag = externalSubId.match(/^[A-Z]{4}G/u)?.[0]
-    ?? (shelterName ? SHELTER_USER_TAGS[shelterName] : undefined);
-  if (!userTag) return GOVERNMENT_ADOPTION_LIST_URL;
+  const unitTag = externalSubId.match(/^[A-Z]{4}G/u)?.[0]
+    ?? (/^\d+$/u.test(externalSubId) && shelterName
+      ? SHELTER_UNIT_TAGS[shelterName]
+      : undefined);
+  if (!unitTag) return GOVERNMENT_ADOPTION_LIST_URL;
 
   const url = new URL("https://www.pet.gov.tw/AnimalApp/AnnounceSingle.aspx");
   url.searchParams.set("PageType", "Adopt");
   url.searchParams.set("AcNum", base64(externalSubId));
-  url.searchParams.set("UT", base64(userTag));
+  url.searchParams.set("UT", base64(unitTag));
   return url.toString();
 }
 

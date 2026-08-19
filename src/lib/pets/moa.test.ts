@@ -33,6 +33,9 @@ describe("MOA official pet URLs", () => {
     expect(buildMoaOfficialUrl("legacy-id", "Unknown shelter")).toBe(
       "https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt",
     );
+    expect(buildMoaOfficialUrl("malformed-id", "臺北市動物之家")).toBe(
+      "https://www.pet.gov.tw/AnimalApp/AnnounceMent.aspx?PageType=Adopt",
+    );
   });
 });
 
@@ -54,7 +57,7 @@ describe("MOA pet mapping", () => {
   it("normalizes whitespace, nullable booleans, fallback titles, and source metadata", async () => {
     const mapped = await mapMoaRecord({
       animal_id: " 42 ",
-      animal_subid: " TAIPEI-42 ",
+      animal_subid: " VAAAG115011910 ",
       animal_kind: "狗",
       animal_sex: "M",
       animal_age: "CHILD",
@@ -70,7 +73,7 @@ describe("MOA pet mapping", () => {
 
     expect(mapped).toMatchObject({
       externalId: "42",
-      name: "待認養犬 · TAIPEI-42",
+      name: "待認養犬 · VAAAG115011910",
       species: "dog",
       sex: "male",
       ageBand: "child",
@@ -83,7 +86,7 @@ describe("MOA pet mapping", () => {
       qualityStatus: "warning",
     });
     expect(mapped?.officialUrl).toBe(
-      "https://www.pet.gov.tw/AnimalApp/AnnounceSingle.aspx?PageType=Adopt&AcNum=VEFJUEVJLTQy&UT=VkFBQUc%3D",
+      "https://www.pet.gov.tw/AnimalApp/AnnounceSingle.aspx?PageType=Adopt&AcNum=VkFBQUcxMTUwMTE5MTA%3D&UT=VkFBQUc%3D",
     );
     expect(mapped?.issues.map((issue) => issue.code)).toContain("missing_breed");
     expect(mapped?.contentHash).toMatch(/^[a-f0-9]{64}$/);

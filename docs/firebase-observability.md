@@ -3,6 +3,13 @@
 Pawtner uses consent-gated Firebase Analytics and Performance Monitoring for aggregate browser
 observability. Supabase remains the source of truth for product and authenticated operational data.
 
+## Current status -- 2026-08-19
+
+Production `/api/ops/status` reports `sentryConfigured=false`. Firebase web observability remains a
+separate console/privacy verification gate and is not required to complete the Phase 1-2 production
+deployment baseline. Do not use Analytics or Performance data as release evidence until consent
+behavior and GA/Firebase console setup have been verified in staging.
+
 ## Console setup
 
 1. In Firebase project `pawtner-app-2026`, enable Google Analytics and connect the existing

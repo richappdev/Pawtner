@@ -7,19 +7,21 @@ Government discovery is currently released through both gates:
 
 Setting either gate to `false` remains the supported emergency rollback.
 
-## Current operational status — 2026-08-17
+## Current operational status -- 2026-08-19
 
-- Supabase project status is healthy and all repository migrations through
-  `20260805031738_constrain_profile_locale_to_zh_tw` are applied.
-- Edge Function `sync-moa-pets` version 6 is active.
-- Two authenticated manual dry runs succeeded on 2026-08-05 with 8,167 records.
-- The latest successful real sync completed on 2026-07-28 with 8,183 records.
-- Cron job `pawtner-moa-pet-sync` was observed failing because its stored request body was invalid JSON
-  (`{trigger:cron}`). Forward migration `20260817030136_repair_moa_cron_schedule` safely replaces the
-  named job through `cron.unschedule` and `cron.schedule`, without directly editing `cron.job`.
-- After deploying the repair, observe one scheduled real run before treating the gate as closed. The
-  daily authenticated workflow `.github/workflows/production-smoke.yml` enforces a 26-hour freshness
-  limit and rejects failed, rejected, empty, or materially reduced feeds.
+- Production application deployment is verified at `main@2e547e5`, and public production smoke
+  endpoints passed on 2026-08-19. See [Release evidence matrix](release-evidence-matrix.md).
+- Repository migrations include `20260817030136_repair_moa_cron_schedule` and
+  `20260817040943_grant_closed_pilot_reads`. The live Supabase migration history was not verified in
+  this pass because the Supabase CLI was unavailable on PATH and production database credentials were
+  not present in the workspace.
+- The Cron repair migration safely replaces the named `pawtner-moa-pet-sync` job through
+  `cron.unschedule` and `cron.schedule`, with schedule `30 10 * * *` and body
+  `{"trigger":"cron"}`. Live Cron uniqueness and Vault secret presence still require authenticated
+  Supabase verification.
+- The active `sync-moa-pets` Edge Function version and the latest scheduled non-dry-run MOA sync
+  were not proven in this pass. The protected `Production operational smoke` workflow run
+  `32257893836` was still waiting, so MOA freshness remains a release blocker.
 
 ## Required secrets
 

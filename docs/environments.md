@@ -16,6 +16,21 @@ production Firebase and Supabase backend.
 Use `npm run dev:local` for a clean local database, Firebase Auth emulator,
 synthetic role fixtures, and Next.js. Docker must be available for Supabase.
 
+## Verified deployment evidence -- 2026-08-19
+
+- Production `/api/ops/status` reports `environment=production`, `backendEnvironment=production`,
+  commit `2e547e542b80d2211ce5424f61aa6b79721ed638`, and image digest
+  `sha256:8227e48cc14dfbdc263b90b9a6e3eab25c79aa3b1cad5618f395376d79cc1a83`.
+- GitHub Actions production run `32242515508` completed successfully for PR #8 on `main` at the
+  same commit.
+- Staging deployment run `32242108789` completed successfully for
+  `develop@a4f52224687747da5298671afc661b2f80e3355e`; the staging `/recommend` page returned 200.
+- Staging `/api/**` returned production metadata through `/api/ops/status`, which is expected
+  because staging API traffic rewrites to `pawtner-hosting-web`.
+- Direct Cloud Run inspection was blocked by expired local `gcloud` credentials. Treat
+  `/api/ops/status`, GitHub Actions, Firebase Hosting site listing, and repository rewrite configs
+  as the current evidence until `gcloud auth login` is refreshed and service revisions are inspected.
+
 ## Shared-backend safety rules
 
 - Staging never applies database migrations. Reviewed migrations are applied

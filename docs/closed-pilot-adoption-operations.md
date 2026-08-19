@@ -7,6 +7,17 @@ This increment delivers the invited adopter → foster → admin → 7/30/90-day
 
 The migration is additive. Disabling either control stops new operational writes and hides unfinished UI/API without deleting schema or history.
 
+## Phase 1-2 status -- 2026-08-19
+
+Production is deployed at `main@2e547e5` with the application/API flag enabled. The shared database
+lifecycle flag must remain `false` until the release evidence matrix is complete and signed off.
+See [Release evidence matrix](release-evidence-matrix.md) for the current pass/blocker state.
+
+The 2026-08-19 Phase 1-2 pass verified production deployment metadata and public smoke endpoints,
+but it did not prove the live database flag, Supabase migration history, MOA Cron, Vault secrets,
+Edge Function version, or scheduled real MOA freshness. Do not start cloud mutating role acceptance
+or invite a real cohort until those blockers are closed.
+
 ## Deployment order
 
 1. Apply `20260803052801_closed_pilot_adoption_operations.sql`. Confirm the database flag remains `false`.

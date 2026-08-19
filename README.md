@@ -20,27 +20,30 @@ Canonical project index: [Pawtner Project Home](https://app.notion.com/p/104a418
 ## Current status
 
 Closed-pilot adoption operations are deployed with the application/API flag enabled and the shared
-database lifecycle flag disabled. See [the rollout runbook](docs/closed-pilot-adoption-operations.md)
-for migration order, local fixtures, role acceptance, safe observability, and flag-only rollback.
+database lifecycle flag disabled. The canonical status source is
+[Pawtner Project Home](https://app.notion.com/p/104a4181b628802b93fdee5ce0dadee0);
+this repository mirrors the Phase 1-2 release evidence in
+[Release evidence matrix](docs/release-evidence-matrix.md).
 
-Reviewed on **2026-08-17** against `develop` commit `742fd67` plus the current worktree:
+Reviewed on **2026-08-19** against `main@2e547e5`:
 
-- Firebase Hosting serves the production site through the independent Cloud Run service.
-- Firebase Auth is enabled for all users; the legacy Supabase Auth client path remains only for the documented rollback window.
-- Government discovery, controlled publication, Admin Pets, dashboard counts, and admin photo galleries are implemented.
-- Versioned questionnaires, favorites, recommendations, application queues/transitions, private notes,
-  notifications, and 7/30/90-day follow-ups are implemented behind the database lifecycle flag.
-- Production and frontend-only staging are healthy on Cloud Run and both use Firebase Auth for all users.
-- The final product routes are Taiwan-only and unprefixed; the profile locale is constrained to `zh-TW`.
-- Site-wide SEO and consent-gated Firebase Analytics/Performance foundations are implemented. Observability remains disabled until the console setup, privacy review, and staging verification in `docs/firebase-observability.md` are complete.
-- The closed pilot is **not ready to open**: Orders/Reports/AI admin queues, legal approval, database-flag
-  enablement, local role-based acceptance, rollback rehearsal, alerting, and invited-cohort/support-owner
-  sign-off remain open.
-- A forward-only migration repairs the malformed MOA Cron request, and the authenticated operational
-  smoke now rejects stale, failed, rejected, empty, or materially reduced feeds. Deployment and one
-  observed scheduled run remain required. See [the government rollout runbook](docs/government-pet-rollout.md).
-- Critical adopter, foster, and administrator journeys run against isolated Supabase and Firebase Auth
-  emulators with `npm run test:ui:pilot`; CI runs the same harness.
+- Production `/api/ops/status` reports commit `2e547e542b80d2211ce5424f61aa6b79721ed638`,
+  image digest `sha256:8227e48cc14dfbdc263b90b9a6e3eab25c79aa3b1cad5618f395376d79cc1a83`,
+  production frontend/backend environments, Firebase Auth rollout `all`, and the closed-pilot
+  application/API flag enabled.
+- The 2026-08-19 GitHub `Release production` run for PR #8 completed successfully on `main`
+  at `2e547e542b80d2211ce5424f61aa6b79721ed638`.
+- Frontend-only staging deployed `develop@a4f52224687747da5298671afc661b2f80e3355e`
+  successfully on 2026-08-19. Staging `/api/**` intentionally routes to the production Cloud Run
+  service, so `/api/ops/status` reports production metadata from staging as designed.
+- Production smoke checks passed for `/api/health`, `/api/ops/status`, `/`, `/explore`,
+  `/api/pets?limit=1`, and unauthenticated `/api/admin/pets` returning `401`.
+- Firebase Hosting sites `pawtner-tw` and `pawtner-tw-staging` exist in project
+  `pawtner-app-2026`; repository rewrite configs point production to `pawtner-hosting-web` and
+  staging pages to `pawtner-hosting-web-staging` with staging `/api/**` routed to production.
+- Remaining blockers: live Supabase migration/Cron/Vault/Edge Function verification, one successful
+  scheduled non-dry-run MOA sync within 26 hours, the waiting production operational smoke run,
+  local role acceptance, rollback rehearsal, alerting, and invited-cohort/support-owner sign-off.
 
 ## Repositories
 
